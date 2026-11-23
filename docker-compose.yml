@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: tripflow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tripflow
+      POSTGRES_PASSWORD: tripflow
+      POSTGRES_DB: tripflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - tripflow-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tripflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  tripflow-db-data:
