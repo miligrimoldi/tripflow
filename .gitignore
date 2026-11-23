@@ -155,3 +155,16 @@ vite.config.ts.timestamp-*
 .nx/cache
 .nx/workspace-data
 .nx/migrate-runs
+
+# --- TripFlow ---
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+# Generated Prisma client
+/src/generated/
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+/src/generated/prisma

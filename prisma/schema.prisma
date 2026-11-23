@@ -1,0 +1,174 @@
+// TripFlow database schema.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Authentication (managed by Better Auth — field names follow its conventions)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  memberships        TripMember[]
+  createdActivities  Activity[]
+  createdInvitations TripInvitation[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Trip planning domain
+// ---------------------------------------------------------------------------
+
+model Trip {
+  id          String   @id @default(cuid())
+  name        String
+  destination String
+  description String?
+  /// Calendar dates (no time / timezone).
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     TripMember[]
+  activities  Activity[]
+  invitations TripInvitation[]
+
+  @@map("trip")
+}
+
+enum TripRole {
+  OWNER
+  EDITOR
+}
+
+model TripMember {
+  tripId   String
+  userId   String
+  role     TripRole @default(EDITOR)
+  joinedAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, userId])
+  @@index([userId])
+  @@map("trip_member")
+}
+
+/// Shareable invite link. Regenerating a link replaces the previous one.
+model TripInvitation {
+  id          String   @id @default(cuid())
+  tripId      String
+  token       String   @unique
+  createdById String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@map("trip_invitation")
+}
+
+enum ActivityCategory {
+  SIGHTSEEING
+  FOOD
+  EXCURSION
+  ACCOMMODATION
+  TRANSPORT
+  SHOPPING
+  NIGHTLIFE
+  OTHER
+}
+
+/// An activity belongs to a trip. When `date` is null it lives in the
+/// "ideas" board; otherwise it is scheduled in the itinerary for that day.
+model Activity {
+  id          String           @id @default(cuid())
+  tripId      String
+  title       String
+  category    ActivityCategory @default(OTHER)
+  notes       String?
+  location    String?
+  url         String?
+  date        DateTime?        @db.Date
+  /// "HH:mm" local time, optional.
+  startTime   String?
+  /// Order inside its day (or inside the ideas board).
+  position    Int
+  createdById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([tripId, date, position])
+  @@map("activity")
+}

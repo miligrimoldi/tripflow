@@ -1,0 +1,10 @@
+import type { ComponentProps } from "react";
+import { cn } from "@/lib/cn";
+
+export function Card({ className, ...props }: ComponentProps<"div">) {
+  return <div className={cn("rounded-2xl border border-slate-200 bg-white shadow-sm", className)} {...props} />;
+}
+
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse rounded-lg bg-slate-200/70", className)} />;
+}
