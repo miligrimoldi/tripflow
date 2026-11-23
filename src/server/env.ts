@@ -12,7 +12,19 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
-const parsed = envSchema.safeParse(process.env);
+/**
+ * On Vercel the production domain is known at build/runtime, so
+ * BETTER_AUTH_URL only needs to be set explicitly for custom domains.
+ */
+function defaultAppUrl(): string | undefined {
+  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  return vercelHost ? `https://${vercelHost}` : undefined;
+}
+
+const parsed = envSchema.safeParse({
+  ...process.env,
+  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || defaultAppUrl(),
+});
 
 if (!parsed.success) {
   const details = parsed.error.issues.map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`).join("\n");
