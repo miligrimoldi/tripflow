@@ -56,6 +56,16 @@ npm run dev                     # http://localhost:3000
 | `npm run format`        | Prettier                                        |
 | `npm run db:studio`     | Prisma Studio para inspeccionar la base         |
 
+## Deploy (Vercel + Neon)
+
+1. Importar el repositorio en [Vercel](https://vercel.com/new).
+2. En el proyecto, **Storage → Neon (Postgres)**: crea la base y define `DATABASE_URL` y `DATABASE_URL_UNPOOLED`.
+3. Agregar la variable `BETTER_AUTH_SECRET` (`openssl rand -base64 32`).
+4. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
+
+`BETTER_AUTH_URL` toma el dominio de producción de Vercel automáticamente; solo hace falta definirla si se usa un
+dominio propio.
+
 ## Arquitectura
 
 El código separa **qué hace la aplicación** (reglas de negocio) de **cómo se entrega** (Next.js) y **dónde se guarda**
