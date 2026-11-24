@@ -190,4 +190,3 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Login con Google, verificación de email y recuperación de contraseña.
 - Gastos divididos: quién pagó cada gasto y quién le debe a quién, con la menor cantidad de transferencias.
 - Votos o comentarios en las ideas.
-- Mapa: dibujar el recorrido real por calle (en vez de líneas rectas) y sumar tiempos estimados entre paradas.
