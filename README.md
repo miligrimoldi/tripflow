@@ -11,6 +11,8 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 - **Drag & drop**: arrastrar actividades para reordenarlas o moverlas entre días e ideas, también con teclado
   (Espacio + flechas). Los cambios se ven al instante y, si no se pueden guardar, se revierten.
 - **Tablero de ideas**: actividades sin día asignado (restaurantes, excursiones, lugares…) que después se mueven a un día.
+- **Votos y comentarios**: cada integrante marca las ideas que le interesan y el grupo las comenta ("¿reservamos?",
+  "cierra los lunes"). La idea que claramente lidera se destaca; al pasar a un día, la conversación se conserva.
 - **Categorías**, ubicación, link y notas para cada actividad, con registro de quién la agregó.
 - **Buscador de lugares**: al cargar la ubicación se sugieren lugares reales, priorizando los cercanos al viaje.
 - **Mapa del viaje**: todas las actividades ubicadas, con marcadores numerados y coloreados por día, filtro por día y el
@@ -130,6 +132,10 @@ src/
   millones, poco para un viaje en pesos) y nunca se opera con decimales. Los montos se escriben como en Argentina
   (`1.234,50`) o en inglés (`1,234.50`): `parseAmountToCents` resuelve la ambigüedad con reglas explícitas y testeadas. La
   división por persona reparte el resto centavo a centavo (`splitEvenly`), así la suma da exactamente el total.
+- **Votos idempotentes.** El caso de uso es `setVote(voted: true | false)` y no "toggle": un doble clic o un reintento
+  no puede deshacer el voto. En la base, la clave primaria compuesta `(activityId, userId)` impide votar dos veces
+  aunque lleguen dos requests a la vez. En la UI el voto se ve al instante (`useOptimistic`) y se confirma con el
+  servidor. Solo se votan ideas; borrar comentarios ajenos es un permiso aparte (`comment:moderate`) del organizador.
 - **Fechas sin hora (`DateOnly`).** Un día del viaje es un concepto de calendario: "10 de julio" es el mismo día para
   todo el grupo, esté en la zona horaria que esté. El dominio usa strings `YYYY-MM-DD` y solo la capa de persistencia
   convierte a `@db.Date`, lo que evita los clásicos errores de un día de diferencia.
