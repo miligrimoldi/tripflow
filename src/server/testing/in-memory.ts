@@ -9,6 +9,9 @@ import type { ActivityRepository } from "../activities/activity.repository";
 import { ActivityService } from "../activities/activity.service";
 import { BudgetService } from "../budget/budget.service";
 import type { Expense, ExpenseDetails, NewExpense } from "../budget/expense";
+import type { Comment, NewComment, Vote } from "../discussions/discussion";
+import type { DiscussionRepository } from "../discussions/discussion.repository";
+import { DiscussionService } from "../discussions/discussion.service";
 import type { ExpenseRepository } from "../budget/expense.repository";
 import type { Invitation, NewInvitation } from "../members/invitation";
 import type { InvitationRepository } from "../members/invitation.repository";
@@ -38,6 +41,8 @@ class FakeDb {
   activities = new Map<string, Activity>();
   invitations: Invitation[] = [];
   expenses = new Map<string, Expense>();
+  votes: { activityId: string; userId: string }[] = [];
+  comments = new Map<string, Comment>();
   private sequence = 0;
 
   nextId(prefix: string) {
@@ -280,6 +285,59 @@ export class SequentialTokens implements TokenGenerator {
 }
 
 /** Builds every service wired to in-memory infrastructure. */
+class InMemoryDiscussionRepository implements DiscussionRepository {
+  constructor(private readonly db: FakeDb) {}
+
+  private inTrip(tripId: string) {
+    return (activityId: string) => this.db.activities.get(activityId)?.tripId === tripId;
+  }
+
+  private person(id: string) {
+    return { id, name: this.db.users.get(id)?.name ?? "?" };
+  }
+
+  async listVotes(tripId: string): Promise<Vote[]> {
+    return this.db.votes
+      .filter((vote) => this.inTrip(tripId)(vote.activityId))
+      .map((vote) => ({ activityId: vote.activityId, user: this.person(vote.userId) }));
+  }
+
+  async addVote(activityId: string, userId: string) {
+    if (!this.db.votes.some((v) => v.activityId === activityId && v.userId === userId)) {
+      this.db.votes.push({ activityId, userId });
+    }
+  }
+
+  async removeVote(activityId: string, userId: string) {
+    this.db.votes = this.db.votes.filter((v) => !(v.activityId === activityId && v.userId === userId));
+  }
+
+  async listComments(tripId: string) {
+    return [...this.db.comments.values()].filter((comment) => this.inTrip(tripId)(comment.activityId));
+  }
+
+  async findComment(id: string) {
+    return this.db.comments.get(id) ?? null;
+  }
+
+  async addComment({ activityId, authorId, body }: NewComment) {
+    const comment: Comment = {
+      id: this.db.nextId("comment"),
+      activityId,
+      author: this.person(authorId),
+      body,
+      // Strictly increasing, so ordering by date is deterministic in tests.
+      createdAt: new Date(Date.UTC(2026, 0, 1) + this.db.comments.size * 1000),
+    };
+    this.db.comments.set(comment.id, comment);
+    return comment;
+  }
+
+  async deleteComment(id: string) {
+    this.db.comments.delete(id);
+  }
+}
+
 export function createTestApp() {
   const db = new FakeDb();
   const trips = new InMemoryTripRepository(db);
@@ -287,17 +345,19 @@ export function createTestApp() {
   const invitations = new InMemoryInvitationRepository(db);
   const activities = new InMemoryActivityRepository(db);
   const expenses = new InMemoryExpenseRepository(db);
+  const discussions = new InMemoryDiscussionRepository(db);
   const access = new TripAccessPolicy(members);
   const clock = new FakeClock();
 
   return {
     db,
     clock,
-    repositories: { trips, members, invitations, activities, expenses },
+    repositories: { trips, members, invitations, activities, expenses, discussions },
     tripService: new TripService(trips, activities, access),
     activityService: new ActivityService(activities, trips, access),
     budgetService: new BudgetService(expenses, trips, activities, members, access),
     routeService: new RouteService(activities, trips, new StraightLineTravelCost(), access),
+    discussionService: new DiscussionService(discussions, activities, access),
     membershipService: new MembershipService(members, invitations, trips, access, new SequentialTokens(), clock),
     addUser: (name: string) => db.addUser(name),
   };
