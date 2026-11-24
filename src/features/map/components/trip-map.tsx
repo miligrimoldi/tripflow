@@ -24,9 +24,11 @@ interface TripMapProps {
   routes: Promise<MapRoutes>;
   /** Activity to highlight on load (from "Ver en el mapa"). */
   focusId?: string;
+  /** Just the map, smaller: no day filters, side panel or hints (e.g. for one day). */
+  compact?: boolean;
 }
 
-export function TripMap({ groups, routes: routesPromise, focusId }: TripMapProps) {
+export function TripMap({ groups, routes: routesPromise, focusId, compact = false }: TripMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markers = useRef<Marker[]>([]);
@@ -175,6 +177,17 @@ export function TripMap({ groups, routes: routesPromise, focusId }: TripMapProps
     );
   }
 
+  const map = (
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+      <div ref={container} className={cn("w-full bg-slate-100", compact ? "h-72" : "h-[60vh] min-h-80")} />
+      {!ready && (
+        <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">Cargando mapa…</div>
+      )}
+    </div>
+  );
+
+  if (compact) return map;
+
   return (
     <div className="space-y-3">
       <div role="group" aria-label="Filtrar por día" className="flex flex-wrap gap-2">
@@ -190,14 +203,7 @@ export function TripMap({ groups, routes: routesPromise, focusId }: TripMapProps
         ))}
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-          <div ref={container} className="h-[60vh] min-h-80 w-full bg-slate-100" />
-          {!ready && (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">
-              Cargando mapa…
-            </div>
-          )}
-        </div>
+        {map}
         <RoutePanel
           groups={groups}
           selected={selected === ALL ? null : selected}
@@ -212,7 +218,6 @@ export function TripMap({ groups, routes: routesPromise, focusId }: TripMapProps
     </div>
   );
 }
-
 function FilterChip({
   active,
   onClick,
