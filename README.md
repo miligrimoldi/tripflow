@@ -15,6 +15,8 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
   "cierra los lunes"). La idea que claramente lidera se destaca; al pasar a un día, la conversación se conserva.
 - **Categorías**, ubicación, link y notas para cada actividad, con registro de quién la agregó.
 - **Buscador de lugares**: al cargar la ubicación se sugieren lugares reales, priorizando los cercanos al viaje.
+- **Foto de portada**: cada viaje muestra una foto real de su destino (de Wikipedia) y quien organiza puede subir la
+  suya.
 - **Mapa del viaje**: todas las actividades ubicadas, con marcadores numerados y coloreados por día, filtro por día y el
   recorrido de cada día dibujado **por las calles**, con el tiempo y la distancia en auto entre cada parada y el total
   del día.
@@ -78,6 +80,8 @@ npm run dev                     # http://localhost:3000
 3. Agregar la variable `BETTER_AUTH_SECRET` (`openssl rand -base64 32`).
 4. Opcional: `ROUTING_URL` (por ejemplo `https://router.project-osrm.org`) para recorridos por calle y tiempos en auto.
    Sin ella, el mapa y la optimización usan distancias en línea recta.
+   Opcional: en **Storage → Blob**, crear un Blob store y conectarlo al proyecto (define `BLOB_READ_WRITE_TOKEN`) para
+   poder subir fotos de portada. Sin él, los viajes usan la foto del destino.
 5. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
 
 `BETTER_AUTH_URL` toma el dominio de producción de Vercel automáticamente; solo hace falta definirla si se usa un
@@ -170,6 +174,13 @@ src/
 - **Búsqueda de lugares por un endpoint propio** (`/api/places`), solo para usuarios logueados, con resultados
   cacheados (`"use cache"`) para no abusar de la API pública de Photon mientras se escribe. Las búsquedas se envían a
   Photon (komoot); la URL es configurable con `PHOTON_URL` para usar una instancia propia.
+- **Fotos de portada.** Dos puertos: `DestinationPhotoSource` (la foto principal del artículo de Wikipedia del destino,
+  cacheada por semanas, con crédito a Wikimedia Commons y descartando SVG, que en países son banderas o mapas) e
+  `ImageStorage` (Vercel Blob en producción, `public/uploads` en desarrollo para poder correr el proyecto sin cuenta).
+  Las fotos subidas se validan por sus bytes (firmas de JPEG, PNG y WebP), no por el nombre ni el tipo que declara el
+  navegador, y nunca se acepta SVG porque puede contener scripts. El navegador achica la foto antes de subirla (máximo
+  1920 px): una foto de celular de varios MB pasa a pesar unos cientos de KB. Al reemplazar o quitar una foto, o al
+  borrar el viaje, se borra el archivo anterior.
 - **Cache Components.** Las partes que dependen de la sesión se transmiten dentro de `<Suspense>`, mientras el resto de
   cada página se prerenderiza.
 
