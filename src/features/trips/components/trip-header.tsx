@@ -1,14 +1,24 @@
-import { ArrowLeft, CalendarDays, Map as MapIcon, MapPin, Settings, Wallet, type LucideIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Map as MapIcon,
+  MapPin,
+  Settings,
+  Sunrise,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
 import { formatDateRange } from "@/lib/format";
 import type { TripMember } from "@/server/members/member";
-import { tripLength, type Trip } from "@/server/trips/trip";
+import { dateOnlyFromDate } from "@/server/shared/date-only";
+import { tripLength, tripTiming, type Trip } from "@/server/trips/trip";
 import { TripTimingChip } from "../trip-visuals";
 import { TripCoverImage } from "./trip-cover-image";
 
-type Tab = "itinerary" | "map" | "budget" | "settings";
+type Tab = "itinerary" | "today" | "map" | "budget" | "settings";
 
 interface TripHeaderProps {
   trip: Trip;
@@ -18,8 +28,11 @@ interface TripHeaderProps {
 
 export function TripHeader({ trip, members, active }: TripHeaderProps) {
   const days = tripLength(trip);
+  const ongoing = tripTiming(trip, dateOnlyFromDate(new Date())).kind === "ongoing";
   const tabs: { id: Tab; label: string; href: string; icon: LucideIcon }[] = [
     { id: "itinerary", label: "Itinerario", href: `/trips/${trip.id}`, icon: CalendarDays },
+    // While traveling it's "today"; before or after, a day-by-day agenda.
+    { id: "today", label: ongoing ? "Hoy" : "Día a día", href: `/trips/${trip.id}/today`, icon: Sunrise },
     { id: "map", label: "Mapa", href: `/trips/${trip.id}/map`, icon: MapIcon },
     { id: "budget", label: "Presupuesto", href: `/trips/${trip.id}/budget`, icon: Wallet },
     { id: "settings", label: "Grupo y ajustes", href: `/trips/${trip.id}/settings`, icon: Settings },
