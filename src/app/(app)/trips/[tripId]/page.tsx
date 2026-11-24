@@ -7,6 +7,7 @@ import { toBoardSlots } from "@/features/activities/board";
 import { ActivityForm } from "@/features/activities/components/activity-form";
 import { ItineraryBoard } from "@/features/activities/components/itinerary-board";
 import { toDayOptions } from "@/features/activities/day-options";
+import { summarizeDayRoutes } from "@/features/activities/day-routes";
 import { toDiscussionViews } from "@/features/discussions/view";
 import { TripHeader } from "@/features/trips/components/trip-header";
 import { tripMetadata } from "@/features/trips/metadata";
@@ -15,8 +16,10 @@ import { orNotFound } from "@/lib/page-data";
 import { itineraryPoints } from "@/server/activities/activity";
 import { requireUser } from "@/server/auth/session";
 import {
+  activityPhotoService,
   activityService,
   budgetService,
+  directionsService,
   discussionService,
   membershipService,
   placeService,
@@ -57,6 +60,14 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
 
   const canManage = hasPermission(role, "activity:manage");
   const dayOptions = toDayOptions(trip);
+  // Not awaited: the itinerary renders right away and these stream in (the
+  // first time, finding photos and routes takes a few seconds).
+  const photos = activityPhotoService.photosFor(
+    [...itinerary.days.flatMap((day) => day.activities), ...itinerary.ideas],
+    trip.destination,
+  );
+  const dayRoutes = directionsService.getTripDirections(user.id, tripId).then(summarizeDayRoutes);
+
   const near = canManage ? await placeService.tripArea(trip.destination, itineraryPoints(itinerary)) : null;
 
   return (
@@ -73,6 +84,8 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
         dayOptions={dayOptions}
         canManage={canManage}
         costs={costs}
+        photos={photos}
+        dayRoutes={dayRoutes}
         discussions={toDiscussionViews(discussions)}
         canDiscuss={hasPermission(role, "activity:discuss")}
         mostVotedId={mostVoted(

@@ -1,4 +1,5 @@
 import { Clock, Link2, MapPin, Map as MapIcon, Trophy, Wallet } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -21,6 +22,8 @@ interface ActivityCardProps {
   canDiscuss: boolean;
   /** The idea the group likes the most. */
   mostVoted?: boolean;
+  /** A reliable photo of the place, shown instead of the category icon. */
+  photoUrl?: string;
   /** Optional drag handle rendered at the start of the card. */
   dragHandle?: ReactNode;
   className?: string;
@@ -36,6 +39,7 @@ export function ActivityCard({
   discussion = NO_DISCUSSION,
   canDiscuss,
   mostVoted = false,
+  photoUrl,
   dragHandle,
   className,
 }: ActivityCardProps) {
@@ -51,7 +55,22 @@ export function ActivityCard({
     >
       <div className="flex items-start gap-3">
         {dragHandle}
-        <IconTile icon={category.icon} tone={category.tone} />
+        {photoUrl ? (
+          // The photo, with the category as a small badge so it stays recognizable.
+          <div className="relative shrink-0">
+            <div className="relative size-14 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200/70">
+              <Image src={photoUrl} alt="" fill sizes="56px" className="object-cover" />
+            </div>
+            <IconTile
+              icon={category.icon}
+              tone={category.tone}
+              size="sm"
+              className="absolute -right-1.5 -bottom-1.5 size-6 rounded-md ring-2 ring-white [&_svg]:size-3.5"
+            />
+          </div>
+        ) : (
+          <IconTile icon={category.icon} tone={category.tone} />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

@@ -10,12 +10,18 @@ import { IconTile } from "@/components/ui/icon-tile";
 import type { DiscussionView, DiscussionViews } from "@/features/discussions/view";
 import { DayRouteOptimizer } from "@/features/routes/components/day-route-optimizer";
 import { cn } from "@/lib/cn";
+import { useResolved } from "@/lib/use-resolved";
 import type { Activity } from "@/server/activities/activity";
 import { MIN_STOPS_TO_OPTIMIZE } from "@/server/routes/constants";
 import { moveActivityAction } from "../actions";
 import { IDEAS_SLOT, locate, slotDate, type BoardSlots } from "../board";
+import { pickDayCover } from "../day-cover";
 import { ActivityCard } from "./activity-card";
+import { DayBanner, type DayRouteSummary } from "./day-banner";
 import type { DayOption } from "./activity-form";
+
+const NO_PHOTOS: Record<string, string> = {};
+const NO_ROUTES: Record<string, DayRouteSummary> = {};
 
 export interface BoardDay {
   date: string;
@@ -37,6 +43,13 @@ interface ItineraryBoardProps {
   canDiscuss: boolean;
   /** The idea that clearly leads the votes, if any. */
   mostVotedId: string | null;
+  /**
+   * Photo URL per activity id. Streamed (finding them can take a while the
+   * first time), so the board renders at once and photos fade in.
+   */
+  photos: Promise<Record<string, string>>;
+  /** Each day's route, by date. Streamed too (it may call a routing API). */
+  dayRoutes: Promise<Record<string, DayRouteSummary>>;
   /** Rendered at the top of the sidebar, above the ideas board. */
   sidebar?: ReactNode;
 }
@@ -58,8 +71,12 @@ export function ItineraryBoard({
   discussions,
   canDiscuss,
   mostVotedId,
+  photos: photosPromise,
+  dayRoutes: dayRoutesPromise,
   sidebar,
 }: ItineraryBoardProps) {
+  const photos = useResolved(photosPromise, NO_PHOTOS);
+  const dayRoutes = useResolved(dayRoutesPromise, NO_ROUTES);
   const [slots, setSlots] = useState(serverSlots);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -86,7 +103,7 @@ export function ItineraryBoard({
   }
 
   const ideas = slots[IDEAS_SLOT] ?? [];
-  const slotProps = { dayOptions, canManage, costs, discussions, canDiscuss, mostVotedId };
+  const slotProps = { dayOptions, canManage, costs, discussions, canDiscuss, mostVotedId, photos };
 
   return (
     <DragDropProvider
@@ -127,7 +144,6 @@ export function ItineraryBoard({
           <ol>
             {days.map((day, index) => {
               const dayActivities = slots[day.date] ?? [];
-              const count = dayActivities.length;
               const located = dayActivities.filter((activity) => activity.coordinates).length;
               return (
                 // Timeline: a numbered marker per day joined by a vertical line.
@@ -147,17 +163,17 @@ export function ItineraryBoard({
                     tripId={tripId}
                     date={day.date}
                     enabled={canManage && located >= MIN_STOPS_TO_OPTIMIZE}
-                    heading={
-                      <h3 className="flex flex-wrap items-baseline gap-x-3">
-                        <span className="font-display text-lg font-semibold text-slate-900">
-                          <span className="sr-only">Día {day.dayNumber}: </span>
-                          {day.label}
-                        </span>
-                        <span className="text-xs font-medium text-slate-500">
-                          {count === 0 ? "Libre" : `${count} ${count === 1 ? "actividad" : "actividades"}`}
-                        </span>
-                      </h3>
-                    }
+                    buttonVariant="light"
+                    header={(button) => (
+                      <DayBanner
+                        dayNumber={day.dayNumber}
+                        label={day.label}
+                        activityCount={dayActivities.length}
+                        photoUrl={pickDayCover(dayActivities, photos)}
+                        route={dayRoutes[day.date] ?? null}
+                        action={button}
+                      />
+                    )}
                   />
                   <Slot
                     slotId={day.date}
@@ -212,6 +228,7 @@ interface SlotProps {
   discussions: DiscussionViews;
   canDiscuss: boolean;
   mostVotedId: string | null;
+  photos: Record<string, string>;
 }
 
 /** A droppable list (a day or the ideas board). Empty slots still accept drops. */
@@ -225,6 +242,7 @@ function Slot({
   discussions,
   canDiscuss,
   mostVotedId,
+  photos,
 }: SlotProps) {
   const { ref, isDropTarget } = useDroppable({
     id: slotId,
@@ -257,6 +275,7 @@ function Slot({
           discussion={discussions[activity.id]}
           canDiscuss={canDiscuss}
           mostVoted={activity.id === mostVotedId}
+          photoUrl={photos[activity.id]}
         />
       ))}
       {activities.length === 0 && (
@@ -279,6 +298,7 @@ interface SortableActivityProps {
   discussion?: DiscussionView;
   canDiscuss: boolean;
   mostVoted: boolean;
+  photoUrl?: string;
 }
 
 function SortableActivity({
@@ -291,6 +311,7 @@ function SortableActivity({
   discussion,
   canDiscuss,
   mostVoted,
+  photoUrl,
 }: SortableActivityProps) {
   const { ref, handleRef, isDragging } = useSortable({
     id: activity.id,
@@ -311,6 +332,7 @@ function SortableActivity({
         discussion={discussion}
         canDiscuss={canDiscuss}
         mostVoted={mostVoted}
+        photoUrl={photoUrl}
         className={cn(isDragging && "shadow-lift ring-2 ring-brand-500")}
         dragHandle={
           canManage && (
