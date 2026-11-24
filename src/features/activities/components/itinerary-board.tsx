@@ -7,8 +7,10 @@ import { useSortable } from "@dnd-kit/react/sortable";
 import { CalendarPlus, GripVertical, Lightbulb } from "lucide-react";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { IconTile } from "@/components/ui/icon-tile";
+import { DayRouteOptimizer } from "@/features/routes/components/day-route-optimizer";
 import { cn } from "@/lib/cn";
 import type { Activity } from "@/server/activities/activity";
+import { MIN_STOPS_TO_OPTIMIZE } from "@/server/routes/constants";
 import { moveActivityAction } from "../actions";
 import { IDEAS_SLOT, locate, slotDate, type BoardSlots } from "../board";
 import { ActivityCard } from "./activity-card";
@@ -22,6 +24,7 @@ export interface BoardDay {
 }
 
 interface ItineraryBoardProps {
+  tripId: string;
   days: BoardDay[];
   slots: BoardSlots;
   dayOptions: DayOption[];
@@ -40,6 +43,7 @@ interface ItineraryBoardProps {
  * fails, it rolls back to the last known server state.
  */
 export function ItineraryBoard({
+  tripId,
   days,
   slots: serverSlots,
   dayOptions,
@@ -113,7 +117,9 @@ export function ItineraryBoard({
           </h2>
           <ol>
             {days.map((day, index) => {
-              const count = slots[day.date]?.length ?? 0;
+              const dayActivities = slots[day.date] ?? [];
+              const count = dayActivities.length;
+              const located = dayActivities.filter((activity) => activity.coordinates).length;
               return (
                 // Timeline: a numbered marker per day joined by a vertical line.
                 <li key={day.date} className="relative pb-8 pl-14 last:pb-0">
@@ -126,15 +132,24 @@ export function ItineraryBoard({
                   >
                     {day.dayNumber}
                   </span>
-                  <h3 className="mb-3 flex min-h-10 flex-wrap items-baseline gap-x-3">
-                    <span className="font-display text-lg font-semibold text-slate-900">
-                      <span className="sr-only">Día {day.dayNumber}: </span>
-                      {day.label}
-                    </span>
-                    <span className="text-xs font-medium text-slate-500">
-                      {count === 0 ? "Libre" : `${count} ${count === 1 ? "actividad" : "actividades"}`}
-                    </span>
-                  </h3>
+                  <DayRouteOptimizer
+                    // Remount when the day's order changes, so an old suggestion never lingers.
+                    key={dayActivities.map((activity) => activity.id).join()}
+                    tripId={tripId}
+                    date={day.date}
+                    enabled={canManage && located >= MIN_STOPS_TO_OPTIMIZE}
+                    heading={
+                      <h3 className="flex flex-wrap items-baseline gap-x-3">
+                        <span className="font-display text-lg font-semibold text-slate-900">
+                          <span className="sr-only">Día {day.dayNumber}: </span>
+                          {day.label}
+                        </span>
+                        <span className="text-xs font-medium text-slate-500">
+                          {count === 0 ? "Libre" : `${count} ${count === 1 ? "actividad" : "actividades"}`}
+                        </span>
+                      </h3>
+                    }
+                  />
                   <Slot
                     slotId={day.date}
                     activities={slots[day.date] ?? []}

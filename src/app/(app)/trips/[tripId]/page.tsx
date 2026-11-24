@@ -53,6 +53,7 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
     <div className="space-y-8">
       <TripHeader trip={trip} members={members} active="itinerary" />
       <ItineraryBoard
+        tripId={trip.id}
         days={itinerary.days.map((day) => ({
           date: day.date,
           dayNumber: day.dayNumber,

@@ -4,6 +4,7 @@ import { ActivityService } from "./activities/activity.service";
 import { BudgetService } from "./budget/budget.service";
 import { env } from "./env";
 import { PhotonPlaceSearch } from "./infrastructure/photon/photon-place-search";
+import { OsrmTravelCost } from "./infrastructure/routing/osrm-travel-cost";
 import { prisma } from "./infrastructure/prisma/client";
 import { PrismaActivityRepository } from "./infrastructure/prisma/prisma-activity.repository";
 import { PrismaExpenseRepository } from "./infrastructure/prisma/prisma-expense.repository";
@@ -12,6 +13,8 @@ import { PrismaMembershipRepository } from "./infrastructure/prisma/prisma-membe
 import { PrismaTripRepository } from "./infrastructure/prisma/prisma-trip.repository";
 import { MembershipService } from "./members/membership.service";
 import { PlaceService } from "./places/place.service";
+import { RouteService } from "./routes/route.service";
+import { FallbackTravelCost, StraightLineTravelCost, type TravelCostProvider } from "./routes/travel-cost";
 import { TripAccessPolicy } from "./members/trip-access";
 import { systemClock, type TokenGenerator } from "./shared/ports";
 import { TripService } from "./trips/trip.service";
@@ -56,3 +59,11 @@ export const budgetService = new BudgetService(
 );
 
 export const placeService = new PlaceService(new PhotonPlaceSearch(env.PHOTON_URL));
+
+// Road times when an OSRM server is configured (falling back to straight
+// lines if it fails); straight-line distances otherwise.
+const travelCost: TravelCostProvider = env.ROUTING_URL
+  ? new FallbackTravelCost(new OsrmTravelCost(env.ROUTING_URL), new StraightLineTravelCost())
+  : new StraightLineTravelCost();
+
+export const routeService = new RouteService(activityRepository, tripRepository, travelCost, tripAccess);
