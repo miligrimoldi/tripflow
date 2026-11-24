@@ -11,6 +11,7 @@ const searchSchema = z.object({
       pages: z.array(
         z.object({
           index: z.number().optional(),
+          title: z.string(),
           pageimage: z.string().optional(),
           thumbnail: z.object({ source: z.url() }).optional(),
         }),
@@ -34,6 +35,7 @@ export function parseWikipediaPhoto(json: unknown): DestinationPhoto | null {
 
   return {
     url: best.thumbnail.source,
+    title: best.title,
     creditUrl: `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(best.pageimage)}`,
   };
 }

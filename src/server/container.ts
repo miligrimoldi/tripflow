@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { ActivityService } from "./activities/activity.service";
 import { BudgetService } from "./budget/budget.service";
 import { SettleUpService } from "./budget/settle-up.service";
+import { ActivityPhotoService } from "./covers/activity-photo";
 import { CoverService } from "./covers/cover.service";
 import { ExchangeRateService } from "./currency/exchange-rate.service";
 import type { ImageStorage } from "./covers/ports";
@@ -10,6 +11,7 @@ import { DiscussionService } from "./discussions/discussion.service";
 import { env } from "./env";
 import { DolarApiExchangeRates } from "./infrastructure/exchange/dolarapi-exchange-rates";
 import { FrankfurterExchangeRates } from "./infrastructure/exchange/frankfurter-exchange-rates";
+import { OpenMeteoWeather } from "./infrastructure/open-meteo/open-meteo-weather";
 import { LocalDiskImageStorage } from "./infrastructure/storage/local-disk-image-storage";
 import { VercelBlobImageStorage } from "./infrastructure/storage/vercel-blob-image-storage";
 import { WikipediaDestinationPhotos } from "./infrastructure/wikipedia/wikipedia-destination-photos";
@@ -33,6 +35,7 @@ import { FallbackTravelCost, StraightLineTravelCost, type TravelCostProvider } f
 import { TripAccessPolicy } from "./members/trip-access";
 import { systemClock, type TokenGenerator } from "./shared/ports";
 import { TripService } from "./trips/trip.service";
+import { WeatherService } from "./weather/weather.service";
 
 /**
  * Composition root: the only place that knows which concrete implementations
@@ -59,12 +62,13 @@ const imageStorage: ImageStorage | null = env.BLOB_READ_WRITE_TOKEN
     ? new LocalDiskImageStorage()
     : null;
 
-export const coverService = new CoverService(
-  tripRepository,
-  new WikipediaDestinationPhotos(),
-  imageStorage,
-  tripAccess,
-);
+const wikipediaPhotos = new WikipediaDestinationPhotos();
+
+export const coverService = new CoverService(tripRepository, wikipediaPhotos, imageStorage, tripAccess);
+
+export const activityPhotoService = new ActivityPhotoService(wikipediaPhotos);
+
+export const weatherService = new WeatherService(new OpenMeteoWeather());
 
 export const tripService = new TripService(tripRepository, activityRepository, coverService, tripAccess);
 
