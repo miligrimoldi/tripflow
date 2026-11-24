@@ -4,7 +4,7 @@
  * Because services depend on interfaces (not on Prisma), the whole business
  * logic can be tested fast and without a database.
  */
-import type { Activity, ActivityDetails, NewActivity } from "../activities/activity";
+import type { Activity, ActivityDetails, NewActivity, SlotOrder } from "../activities/activity";
 import type { ActivityRepository } from "../activities/activity.repository";
 import { ActivityService } from "../activities/activity.service";
 import type { Invitation, NewInvitation } from "../members/invitation";
@@ -172,10 +172,12 @@ class InMemoryActivityRepository implements ActivityRepository {
     return activity;
   }
 
-  async setOrder(orderedIds: string[]) {
-    orderedIds.forEach((id, position) => {
-      this.db.activities.set(id, { ...this.db.activities.get(id)!, position });
-    });
+  async saveOrder(slots: SlotOrder[]) {
+    for (const { date, activityIds } of slots) {
+      activityIds.forEach((id, position) => {
+        this.db.activities.set(id, { ...this.db.activities.get(id)!, date, position });
+      });
+    }
   }
 
   async delete(id: string) {

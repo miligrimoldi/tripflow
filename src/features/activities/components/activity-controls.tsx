@@ -5,8 +5,7 @@ import { useActionState } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { idleState } from "@/lib/action-state";
-import type { MoveDirection } from "@/server/activities/activity";
-import { deleteActivityAction, moveActivityAction, scheduleActivityAction } from "../actions";
+import { deleteActivityAction, moveToDayAction } from "../actions";
 import type { DayOption } from "./activity-form";
 
 interface ActivityControlsProps {
@@ -14,41 +13,25 @@ interface ActivityControlsProps {
   tripId: string;
   currentDate: string | null;
   dayOptions: DayOption[];
-  canMoveUp: boolean;
-  canMoveDown: boolean;
 }
 
-export function ActivityControls({
-  activityId,
-  tripId,
-  currentDate,
-  dayOptions,
-  canMoveUp,
-  canMoveDown,
-}: ActivityControlsProps) {
-  const [scheduleState, scheduleAction, schedulePending] = useActionState(
-    scheduleActivityAction.bind(null, activityId),
-    idleState,
-  );
-  const [moveState, moveAction, movePending] = useActionState(
-    (_prev: unknown, direction: MoveDirection) => moveActivityAction(activityId, direction),
-    idleState,
-  );
-  const error =
-    (scheduleState.status === "error" && scheduleState.message) || (moveState.status === "error" && moveState.message);
+export function ActivityControls({ activityId, tripId, currentDate, dayOptions }: ActivityControlsProps) {
+  const [state, moveAction, pending] = useActionState(moveToDayAction.bind(null, activityId), idleState);
 
   return (
     <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
       <div className="flex flex-wrap items-center gap-2">
-        <form action={scheduleAction}>
-          <label className="sr-only" htmlFor={`schedule-${activityId}`}>
+        {/* Alternative to drag & drop, handy on small screens. Keyed by the
+            current day so it shows the right value after the activity moves. */}
+        <form action={moveAction} key={currentDate ?? "ideas"}>
+          <label className="sr-only" htmlFor={`move-${activityId}`}>
             Mover a
           </label>
           <select
-            id={`schedule-${activityId}`}
+            id={`move-${activityId}`}
             name="date"
             defaultValue={currentDate ?? ""}
-            disabled={schedulePending}
+            disabled={pending}
             // Submit as soon as a new day is picked.
             onChange={(event) => event.currentTarget.form?.requestSubmit()}
             className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-700"
@@ -67,19 +50,6 @@ export function ActivityControls({
           </noscript>
         </form>
 
-        <div className="flex items-center">
-          <form action={() => moveAction("up")}>
-            <Button size="sm" variant="ghost" disabled={!canMoveUp || movePending} aria-label="Subir">
-              ↑
-            </Button>
-          </form>
-          <form action={() => moveAction("down")}>
-            <Button size="sm" variant="ghost" disabled={!canMoveDown || movePending} aria-label="Bajar">
-              ↓
-            </Button>
-          </form>
-        </div>
-
         <Link
           href={`/trips/${tripId}/activities/${activityId}/edit`}
           className={buttonClasses({ variant: "ghost", size: "sm" })}
@@ -96,9 +66,9 @@ export function ActivityControls({
           size="sm"
         />
       </div>
-      {error && (
+      {state.status === "error" && (
         <p role="alert" className="text-xs text-red-600">
-          {error}
+          {state.message}
         </p>
       )}
     </div>

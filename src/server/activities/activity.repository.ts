@@ -1,5 +1,5 @@
 import type { DateOnly } from "../shared/date-only";
-import type { Activity, ActivityDetails, NewActivity } from "./activity";
+import type { Activity, ActivityDetails, NewActivity, SlotOrder } from "./activity";
 
 export interface ActivityRepository {
   findById(id: string): Promise<Activity | null>;
@@ -10,8 +10,11 @@ export interface ActivityRepository {
   nextPosition(tripId: string, date: DateOnly | null): Promise<number>;
   create(data: NewActivity): Promise<Activity>;
   update(id: string, data: ActivityDetails & { position: number }): Promise<Activity>;
-  /** Persists a new order: `orderedIds[i]` gets position `i`. */
-  setOrder(orderedIds: string[]): Promise<void>;
+  /**
+   * Persists the order of one or more slots atomically: each listed activity
+   * gets the slot's date and its index as position.
+   */
+  saveOrder(slots: SlotOrder[]): Promise<void>;
   delete(id: string): Promise<void>;
   /**
    * Moves every activity dated outside [start, end] back to the ideas board.

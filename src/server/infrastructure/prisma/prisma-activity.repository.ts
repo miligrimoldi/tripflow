@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import type { Activity, ActivityDetails, NewActivity } from "@/server/activities/activity";
+import type { Activity, ActivityDetails, NewActivity, SlotOrder } from "@/server/activities/activity";
 import type { ActivityRepository } from "@/server/activities/activity.repository";
 import { dateOnlyFromDate, dateOnlyToDate, type DateOnly } from "@/server/shared/date-only";
 import type { Db } from "./client";
@@ -99,9 +99,16 @@ export class PrismaActivityRepository implements ActivityRepository {
     return toActivity(row);
   }
 
-  async setOrder(orderedIds: string[]): Promise<void> {
+  async saveOrder(slots: SlotOrder[]): Promise<void> {
     await this.db.$transaction(
-      orderedIds.map((id, position) => this.db.activity.update({ where: { id }, data: { position } })),
+      slots.flatMap(({ date, activityIds }) =>
+        activityIds.map((id, position) =>
+          this.db.activity.update({
+            where: { id },
+            data: { position, date: date ? dateOnlyToDate(date) : null },
+          }),
+        ),
+      ),
     );
   }
 

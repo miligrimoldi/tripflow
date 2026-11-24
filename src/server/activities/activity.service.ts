@@ -4,22 +4,9 @@ import { NotFoundError, ValidationError } from "../shared/errors";
 import { parseInput } from "../shared/validation";
 import type { Trip } from "../trips/trip";
 import type { TripRepository } from "../trips/trip.repository";
-import {
-  buildItinerary,
-  isDateInTrip,
-  reorder,
-  toDetails,
-  type Activity,
-  type Itinerary,
-  type MoveDirection,
-} from "./activity";
+import { buildItinerary, isDateInTrip, planMove, type Activity, type Itinerary, type SlotOrder } from "./activity";
 import type { ActivityRepository } from "./activity.repository";
-import {
-  activityDetailsSchema,
-  scheduleSchema,
-  type ActivityDetailsInput,
-  type ScheduleInput,
-} from "./activity.schemas";
+import { activityDetailsSchema, moveSchema, type ActivityDetailsInput, type MoveInput } from "./activity.schemas";
 
 export class ActivityService {
   constructor(
@@ -66,26 +53,21 @@ export class ActivityService {
     return this.activities.update(activityId, { ...details, position });
   }
 
-  /** Moves an activity to a day of the itinerary, or back to ideas (`date: null`). */
-  async schedule(userId: string, activityId: string, input: ScheduleInput): Promise<Activity> {
-    const { date } = parseInput(scheduleSchema, input);
+  /**
+   * Moves an activity to a day of the itinerary (or back to ideas with
+   * `date: null`), at `index` inside that day. Without `index` it is appended
+   * at the end. Covers reordering within a day as well.
+   */
+  async move(userId: string, activityId: string, input: MoveInput): Promise<void> {
+    const { date, index } = parseInput(moveSchema, input);
     const current = await this.loadManageable(userId, activityId);
-    if (date === current.date) return current;
-
     this.assertDateInTrip(date, await this.loadTrip(current.tripId));
-    return this.activities.update(activityId, {
-      ...toDetails(current),
-      date,
-      position: await this.activities.nextPosition(current.tripId, date),
-    });
-  }
 
-  /** Moves an activity one slot up or down inside its day / the ideas board. */
-  async move(userId: string, activityId: string, direction: MoveDirection): Promise<void> {
-    const current = await this.loadManageable(userId, activityId);
-    const siblings = await this.activities.listBySlot(current.tripId, current.date);
-    const newOrder = reorder(siblings, activityId, direction);
-    if (newOrder) await this.activities.setOrder(newOrder);
+    const [from, to] = await Promise.all([
+      this.slotOrder(current.tripId, current.date),
+      date === current.date ? null : this.slotOrder(current.tripId, date),
+    ]);
+    await this.activities.saveOrder(planMove({ activityId, from, to: to ?? from, index }));
   }
 
   async delete(userId: string, activityId: string): Promise<{ tripId: string }> {
@@ -99,6 +81,11 @@ export class ActivityService {
     if (!activity) throw new NotFoundError("Actividad");
     await this.access.require(activity.tripId, userId, "activity:manage");
     return activity;
+  }
+
+  private async slotOrder(tripId: string, date: DateOnly | null): Promise<SlotOrder> {
+    const activities = await this.activities.listBySlot(tripId, date);
+    return { date, activityIds: activities.map((activity) => activity.id) };
   }
 
   private async loadTrip(tripId: string): Promise<Trip> {

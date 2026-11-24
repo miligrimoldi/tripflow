@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { Activity } from "@/server/activities/activity";
 import { CATEGORY_META } from "../categories";
@@ -8,16 +9,18 @@ interface ActivityCardProps {
   activity: Activity;
   dayOptions: DayOption[];
   canManage: boolean;
-  isFirst: boolean;
-  isLast: boolean;
+  /** Optional drag handle rendered at the start of the card. */
+  dragHandle?: ReactNode;
+  className?: string;
 }
 
-export function ActivityCard({ activity, dayOptions, canManage, isFirst, isLast }: ActivityCardProps) {
+export function ActivityCard({ activity, dayOptions, canManage, dragHandle, className }: ActivityCardProps) {
   const category = CATEGORY_META[activity.category];
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+    <article className={cn("rounded-xl border border-slate-200 bg-white p-4 shadow-xs", className)}>
       <div className="flex items-start gap-3">
+        {dragHandle}
         <span className="text-xl leading-none" aria-hidden>
           {category.icon}
         </span>
@@ -54,8 +57,6 @@ export function ActivityCard({ activity, dayOptions, canManage, isFirst, isLast 
           tripId={activity.tripId}
           currentDate={activity.date}
           dayOptions={dayOptions}
-          canMoveUp={!isFirst}
-          canMoveDown={!isLast}
         />
       )}
     </article>
