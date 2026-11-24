@@ -20,6 +20,8 @@ import { isWithinRange, type DateOnly } from "../shared/date-only";
 import type { Clock, TokenGenerator } from "../shared/ports";
 import type { BudgetSettings, Trip, TripDetails, TripSummary } from "../trips/trip";
 import type { TripRepository } from "../trips/trip.repository";
+import { RouteService } from "../routes/route.service";
+import { StraightLineTravelCost } from "../routes/travel-cost";
 import { TripService } from "../trips/trip.service";
 
 export interface FakeUser {
@@ -295,6 +297,7 @@ export function createTestApp() {
     tripService: new TripService(trips, activities, access),
     activityService: new ActivityService(activities, trips, access),
     budgetService: new BudgetService(expenses, trips, activities, members, access),
+    routeService: new RouteService(activities, trips, new StraightLineTravelCost(), access),
     membershipService: new MembershipService(members, invitations, trips, access, new SequentialTokens(), clock),
     addUser: (name: string) => db.addUser(name),
   };
