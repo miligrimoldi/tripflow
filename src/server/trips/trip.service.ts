@@ -1,4 +1,5 @@
 import type { ActivityRepository } from "../activities/activity.repository";
+import type { CoverService } from "../covers/cover.service";
 import type { MemberRole } from "../members/member";
 import type { TripAccessPolicy } from "../members/trip-access";
 import { NotFoundError } from "../shared/errors";
@@ -17,6 +18,7 @@ export class TripService {
     private readonly trips: TripRepository,
     // Only the capability we need (Interface Segregation).
     private readonly activities: Pick<ActivityRepository, "unscheduleOutsideRange">,
+    private readonly covers: Pick<CoverService, "discard">,
     private readonly access: TripAccessPolicy,
   ) {}
 
@@ -49,6 +51,9 @@ export class TripService {
 
   async delete(userId: string, tripId: string): Promise<void> {
     await this.access.require(tripId, userId, "trip:delete");
+    const trip = await this.trips.findById(tripId);
     await this.trips.delete(tripId);
+    // Its uploaded photo would otherwise stay in storage forever.
+    await this.covers.discard(trip?.coverImageUrl ?? null);
   }
 }

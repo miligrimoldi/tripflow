@@ -2,8 +2,13 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { ActivityService } from "./activities/activity.service";
 import { BudgetService } from "./budget/budget.service";
+import { CoverService } from "./covers/cover.service";
+import type { ImageStorage } from "./covers/ports";
 import { DiscussionService } from "./discussions/discussion.service";
 import { env } from "./env";
+import { LocalDiskImageStorage } from "./infrastructure/storage/local-disk-image-storage";
+import { VercelBlobImageStorage } from "./infrastructure/storage/vercel-blob-image-storage";
+import { WikipediaDestinationPhotos } from "./infrastructure/wikipedia/wikipedia-destination-photos";
 import { PhotonPlaceSearch } from "./infrastructure/photon/photon-place-search";
 import { OsrmDirections } from "./infrastructure/routing/osrm-directions";
 import { OsrmTravelCost } from "./infrastructure/routing/osrm-travel-cost";
@@ -42,7 +47,21 @@ const expenseRepository = new PrismaExpenseRepository(prisma);
 
 const tripAccess = new TripAccessPolicy(membershipRepository);
 
-export const tripService = new TripService(tripRepository, activityRepository, tripAccess);
+// Vercel Blob when configured; the local disk only in development.
+const imageStorage: ImageStorage | null = env.BLOB_READ_WRITE_TOKEN
+  ? new VercelBlobImageStorage()
+  : env.NODE_ENV === "development"
+    ? new LocalDiskImageStorage()
+    : null;
+
+export const coverService = new CoverService(
+  tripRepository,
+  new WikipediaDestinationPhotos(),
+  imageStorage,
+  tripAccess,
+);
+
+export const tripService = new TripService(tripRepository, activityRepository, coverService, tripAccess);
 
 export const activityService = new ActivityService(activityRepository, tripRepository, tripAccess);
 

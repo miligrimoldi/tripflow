@@ -7,5 +7,6 @@ export interface TripRepository {
   listForUser(userId: string): Promise<TripSummary[]>;
   update(id: string, details: TripDetails): Promise<Trip>;
   updateBudgetSettings(id: string, settings: BudgetSettings): Promise<Trip>;
+  updateCover(id: string, coverImageUrl: string | null): Promise<Trip>;
   delete(id: string): Promise<void>;
 }

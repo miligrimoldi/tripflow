@@ -15,6 +15,8 @@ export interface Trip {
   currency: Currency;
   /** Optional total budget, in cents of `currency`. */
   budgetCents: number | null;
+  /** Photo uploaded by the organizer, if any. */
+  coverImageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

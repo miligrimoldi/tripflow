@@ -87,19 +87,21 @@ model Verification {
 // ---------------------------------------------------------------------------
 
 model Trip {
-  id          String   @id @default(cuid())
-  name        String
-  destination String
-  description String?
+  id            String   @id @default(cuid())
+  name          String
+  destination   String
+  description   String?
   /// Calendar dates (no time / timezone).
-  startDate   DateTime @db.Date
-  endDate     DateTime @db.Date
+  startDate     DateTime @db.Date
+  endDate       DateTime @db.Date
   /// ISO 4217 code used for every amount of the trip (no conversions).
-  currency    String   @default("ARS")
+  currency      String   @default("ARS")
   /// Optional total budget, in hundredths of `currency`.
-  budgetCents BigInt?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  budgetCents   BigInt?
+  /// Photo uploaded by the organizer. Without it, the cover is a photo of the destination.
+  coverImageUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   members     TripMember[]
   activities  Activity[]

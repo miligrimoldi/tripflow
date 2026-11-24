@@ -1,9 +1,9 @@
 import { CalendarDays, MapPin, Mountain, Users } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/cn";
 import { formatDateRange } from "@/lib/format";
 import { tripLength, type TripSummary } from "@/server/trips/trip";
-import { coverTexture, tripCover, TripTimingChip } from "../trip-visuals";
+import { TripTimingChip } from "../trip-visuals";
+import { TripCoverImage } from "./trip-cover-image";
 
 export function TripCard({ trip }: { trip: TripSummary }) {
   const days = tripLength(trip);
@@ -12,12 +12,17 @@ export function TripCard({ trip }: { trip: TripSummary }) {
       href={`/trips/${trip.id}`}
       className="group block overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-soft transition duration-200 hover:-translate-y-1 hover:shadow-lift"
     >
-      <div className={cn("relative h-32 overflow-hidden bg-linear-to-br", tripCover(trip.id))}>
-        <div aria-hidden className={cn("absolute inset-0", coverTexture)} />
-        <Mountain
-          aria-hidden
-          strokeWidth={1.25}
-          className="absolute -right-4 -bottom-6 size-36 text-white/20 transition duration-300 group-hover:scale-105"
+      <div className="relative h-36 overflow-hidden bg-slate-200">
+        <TripCoverImage
+          trip={trip}
+          overlay="top"
+          sizes="(min-width: 1024px) 384px, (min-width: 640px) 50vw, 100vw"
+          fallback={
+            <Mountain
+              strokeWidth={1.25}
+              className="absolute -right-4 -bottom-6 size-36 text-white/20 transition duration-300 group-hover:scale-105"
+            />
+          }
         />
         <div className="absolute inset-x-4 top-4 flex items-start justify-between gap-2">
           <TripTimingChip trip={trip} />

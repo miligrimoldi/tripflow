@@ -9,6 +9,9 @@ import type { ActivityRepository } from "../activities/activity.repository";
 import { ActivityService } from "../activities/activity.service";
 import { BudgetService } from "../budget/budget.service";
 import type { Expense, ExpenseDetails, NewExpense } from "../budget/expense";
+import type { DestinationPhoto } from "../covers/cover";
+import { CoverService } from "../covers/cover.service";
+import type { DestinationPhotoSource, ImageStorage } from "../covers/ports";
 import type { Comment, NewComment, Vote } from "../discussions/discussion";
 import type { DiscussionRepository } from "../discussions/discussion.repository";
 import { DiscussionService } from "../discussions/discussion.service";
@@ -74,6 +77,7 @@ class InMemoryTripRepository implements TripRepository {
       id: this.db.nextId("trip"),
       currency: "ARS",
       budgetCents: null,
+      coverImageUrl: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -98,6 +102,12 @@ class InMemoryTripRepository implements TripRepository {
 
   async update(id: string, details: TripDetails): Promise<Trip> {
     const trip = { ...this.db.trips.get(id)!, ...details, updatedAt: new Date() };
+    this.db.trips.set(id, trip);
+    return trip;
+  }
+
+  async updateCover(id: string, coverImageUrl: string | null): Promise<Trip> {
+    const trip = { ...this.db.trips.get(id)!, coverImageUrl, updatedAt: new Date() };
     this.db.trips.set(id, trip);
     return trip;
   }
@@ -265,6 +275,34 @@ class InMemoryExpenseRepository implements ExpenseRepository {
   }
 }
 
+/** Keeps files in memory and remembers what was stored and deleted. */
+export class FakeImageStorage implements ImageStorage {
+  files = new Map<string, { bytes: Uint8Array; contentType: string }>();
+  private sequence = 0;
+
+  async save(name: string, bytes: Uint8Array, contentType: string) {
+    this.sequence += 1;
+    const url = `https://storage.test/${this.sequence}-${name}`;
+    this.files.set(url, { bytes, contentType });
+    return url;
+  }
+
+  async delete(url: string) {
+    this.files.delete(url);
+  }
+}
+
+/** Photos by destination, set by each test. */
+export class FakeDestinationPhotos implements DestinationPhotoSource {
+  photos = new Map<string, DestinationPhoto>();
+  failing = false;
+
+  async find(destination: string) {
+    if (this.failing) throw new Error("photo source down");
+    return this.photos.get(destination) ?? null;
+  }
+}
+
 export class FakeClock implements Clock {
   constructor(private current = new Date("2026-01-01T12:00:00Z")) {}
 
@@ -350,12 +388,18 @@ export function createTestApp() {
   const discussions = new InMemoryDiscussionRepository(db);
   const access = new TripAccessPolicy(members);
   const clock = new FakeClock();
+  const storage = new FakeImageStorage();
+  const destinationPhotos = new FakeDestinationPhotos();
+  const coverService = new CoverService(trips, destinationPhotos, storage, access);
 
   return {
     db,
     clock,
     repositories: { trips, members, invitations, activities, expenses, discussions },
-    tripService: new TripService(trips, activities, access),
+    storage,
+    destinationPhotos,
+    coverService,
+    tripService: new TripService(trips, activities, coverService, access),
     activityService: new ActivityService(activities, trips, access),
     discussionService: new DiscussionService(discussions, activities, access),
     budgetService: new BudgetService(expenses, trips, activities, members, access),
