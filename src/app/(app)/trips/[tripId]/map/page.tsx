@@ -5,13 +5,13 @@ import { Suspense } from "react";
 import { Card, CardHeading, Skeleton } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TripMap } from "@/features/map/components/trip-map";
-import { buildMapData } from "@/features/map/map-data";
+import { buildMapData, toMapRoutes } from "@/features/map/map-data";
 import { TripHeader } from "@/features/trips/components/trip-header";
 import { tripMetadata } from "@/features/trips/metadata";
 import { formatDayShort } from "@/lib/format";
 import { orNotFound } from "@/lib/page-data";
 import { requireUser } from "@/server/auth/session";
-import { activityService, membershipService, tripService } from "@/server/container";
+import { activityService, directionsService, membershipService, tripService } from "@/server/container";
 import { hasPermission } from "@/server/members/member";
 
 type Props = PageProps<"/trips/[tripId]/map">;
@@ -40,6 +40,8 @@ async function TripMapView({ params, searchParams }: Props) {
   );
 
   const { groups, unlocated } = buildMapData(itinerary, formatDayShort);
+  // Not awaited: the map renders right away and the routes stream in.
+  const routes = directionsService.getTripDirections(user.id, tripId).then(toMapRoutes);
   const canManage = hasPermission(role, "activity:manage");
 
   return (
@@ -47,7 +49,7 @@ async function TripMapView({ params, searchParams }: Props) {
       <TripHeader trip={trip} members={members} active="map" />
 
       {groups.length > 0 ? (
-        <TripMap groups={groups} focusId={typeof focus === "string" ? focus : undefined} />
+        <TripMap groups={groups} routes={routes} focusId={typeof focus === "string" ? focus : undefined} />
       ) : (
         <EmptyState icon={MapIcon} tone="sky" title="Todavía no hay lugares en el mapa">
           Cuando agregues una actividad, buscá su ubicación y elegila de la lista para verla acá.

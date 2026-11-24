@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Activity } from "@/server/activities/activity";
-import { buildMapData, DAY_COLORS, IDEAS_COLOR } from "./map-data";
+import { buildMapData, DAY_COLORS, IDEAS_COLOR, routeForGroup, toMapRoutes } from "./map-data";
 
 const activity = (id: string, coordinates: Activity["coordinates"] = null) =>
   ({
@@ -49,5 +49,37 @@ describe("buildMapData", () => {
 
   it("lists activities that are not on the map yet", () => {
     expect(data.unlocated.map((a) => a.id)).toEqual(["free-text", "idea-free-text"]);
+  });
+});
+
+describe("routes", () => {
+  const data = buildMapData(itinerary, (date) => date);
+  const routes = toMapRoutes([
+    {
+      date: "2026-03-01",
+      stopIds: ["a", "b"],
+      path: [point(1), point(1.5), point(2)],
+      legs: [{ distanceKm: 3, durationMin: 7 }],
+      source: "roads",
+    },
+  ]);
+
+  it("converts paths to GeoJSON [lng, lat] pairs", () => {
+    expect(routes["2026-03-01"].line).toEqual([
+      [-71, 1],
+      [-71, 1.5],
+      [-71, 2],
+    ]);
+  });
+
+  it("matches a route to its day only if the stops are the same", () => {
+    const [day1, day3, ideas] = data.groups;
+    expect(routeForGroup(day1, routes)?.legs).toEqual([{ distanceKm: 3, durationMin: 7 }]);
+    expect(routeForGroup(day3, routes)).toBeNull();
+    expect(routeForGroup(ideas, routes)).toBeNull();
+    expect(routeForGroup(day1, null)).toBeNull();
+
+    const reordered = { ...day1, points: [...day1.points].reverse() };
+    expect(routeForGroup(reordered, routes)).toBeNull();
   });
 });
