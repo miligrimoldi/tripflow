@@ -4,9 +4,12 @@ import { ActivityService } from "./activities/activity.service";
 import { BudgetService } from "./budget/budget.service";
 import { SettleUpService } from "./budget/settle-up.service";
 import { CoverService } from "./covers/cover.service";
+import { ExchangeRateService } from "./currency/exchange-rate.service";
 import type { ImageStorage } from "./covers/ports";
 import { DiscussionService } from "./discussions/discussion.service";
 import { env } from "./env";
+import { DolarApiExchangeRates } from "./infrastructure/exchange/dolarapi-exchange-rates";
+import { FrankfurterExchangeRates } from "./infrastructure/exchange/frankfurter-exchange-rates";
 import { LocalDiskImageStorage } from "./infrastructure/storage/local-disk-image-storage";
 import { VercelBlobImageStorage } from "./infrastructure/storage/vercel-blob-image-storage";
 import { WikipediaDestinationPhotos } from "./infrastructure/wikipedia/wikipedia-destination-photos";
@@ -96,6 +99,12 @@ export const settleUpService = new SettleUpService(
   membershipRepository,
   tripAccess,
 );
+
+// DolarApi first: for anything involving pesos it has every dollar rate.
+export const exchangeRateService = new ExchangeRateService([
+  new DolarApiExchangeRates(),
+  new FrankfurterExchangeRates(),
+]);
 
 export const placeService = new PlaceService(new PhotonPlaceSearch(env.PHOTON_URL));
 
