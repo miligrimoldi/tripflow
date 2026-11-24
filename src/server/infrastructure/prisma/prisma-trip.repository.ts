@@ -1,6 +1,7 @@
 import type { Trip as TripRow } from "@/generated/prisma/client";
 import { dateOnlyFromDate, dateOnlyToDate } from "@/server/shared/date-only";
-import type { Trip, TripDetails, TripSummary } from "@/server/trips/trip";
+import { isCurrency } from "@/server/shared/money";
+import type { BudgetSettings, Trip, TripDetails, TripSummary } from "@/server/trips/trip";
 import type { TripRepository } from "@/server/trips/trip.repository";
 import type { Db } from "./client";
 
@@ -12,6 +13,9 @@ export function toTrip(row: TripRow): Trip {
     description: row.description,
     startDate: dateOnlyFromDate(row.startDate),
     endDate: dateOnlyFromDate(row.endDate),
+    // The column is free text; anything unexpected falls back to the default.
+    currency: isCurrency(row.currency) ? row.currency : "ARS",
+    budgetCents: row.budgetCents === null ? null : Number(row.budgetCents),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -61,6 +65,14 @@ export class PrismaTripRepository implements TripRepository {
 
   async update(id: string, details: TripDetails): Promise<Trip> {
     const row = await this.db.trip.update({ where: { id }, data: toRowData(details) });
+    return toTrip(row);
+  }
+
+  async updateBudgetSettings(id: string, { currency, budgetCents }: BudgetSettings): Promise<Trip> {
+    const row = await this.db.trip.update({
+      where: { id },
+      data: { currency, budgetCents: budgetCents === null ? null : BigInt(budgetCents) },
+    });
     return toTrip(row);
   }
 

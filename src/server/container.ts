@@ -1,10 +1,12 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { ActivityService } from "./activities/activity.service";
+import { BudgetService } from "./budget/budget.service";
 import { env } from "./env";
 import { PhotonPlaceSearch } from "./infrastructure/photon/photon-place-search";
 import { prisma } from "./infrastructure/prisma/client";
 import { PrismaActivityRepository } from "./infrastructure/prisma/prisma-activity.repository";
+import { PrismaExpenseRepository } from "./infrastructure/prisma/prisma-expense.repository";
 import { PrismaInvitationRepository } from "./infrastructure/prisma/prisma-invitation.repository";
 import { PrismaMembershipRepository } from "./infrastructure/prisma/prisma-membership.repository";
 import { PrismaTripRepository } from "./infrastructure/prisma/prisma-trip.repository";
@@ -28,6 +30,7 @@ const tripRepository = new PrismaTripRepository(prisma);
 const activityRepository = new PrismaActivityRepository(prisma);
 const membershipRepository = new PrismaMembershipRepository(prisma);
 const invitationRepository = new PrismaInvitationRepository(prisma);
+const expenseRepository = new PrismaExpenseRepository(prisma);
 
 const tripAccess = new TripAccessPolicy(membershipRepository);
 
@@ -42,6 +45,14 @@ export const membershipService = new MembershipService(
   tripAccess,
   secureTokens,
   systemClock,
+);
+
+export const budgetService = new BudgetService(
+  expenseRepository,
+  tripRepository,
+  activityRepository,
+  membershipRepository,
+  tripAccess,
 );
 
 export const placeService = new PlaceService(new PhotonPlaceSearch(env.PHOTON_URL));

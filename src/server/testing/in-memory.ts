@@ -7,6 +7,9 @@
 import type { Activity, ActivityDetails, NewActivity, SlotOrder } from "../activities/activity";
 import type { ActivityRepository } from "../activities/activity.repository";
 import { ActivityService } from "../activities/activity.service";
+import { BudgetService } from "../budget/budget.service";
+import type { Expense, ExpenseDetails, NewExpense } from "../budget/expense";
+import type { ExpenseRepository } from "../budget/expense.repository";
 import type { Invitation, NewInvitation } from "../members/invitation";
 import type { InvitationRepository } from "../members/invitation.repository";
 import type { MemberRole, TripMember } from "../members/member";
@@ -15,7 +18,7 @@ import { MembershipService } from "../members/membership.service";
 import { TripAccessPolicy } from "../members/trip-access";
 import { isWithinRange, type DateOnly } from "../shared/date-only";
 import type { Clock, TokenGenerator } from "../shared/ports";
-import type { Trip, TripDetails, TripSummary } from "../trips/trip";
+import type { BudgetSettings, Trip, TripDetails, TripSummary } from "../trips/trip";
 import type { TripRepository } from "../trips/trip.repository";
 import { TripService } from "../trips/trip.service";
 
@@ -32,6 +35,7 @@ class FakeDb {
   members: Omit<TripMember, "user">[] = [];
   activities = new Map<string, Activity>();
   invitations: Invitation[] = [];
+  expenses = new Map<string, Expense>();
   private sequence = 0;
 
   nextId(prefix: string) {
@@ -56,7 +60,14 @@ class InMemoryTripRepository implements TripRepository {
 
   async createWithOwner(details: TripDetails, ownerId: string): Promise<Trip> {
     const now = new Date();
-    const trip: Trip = { ...details, id: this.db.nextId("trip"), createdAt: now, updatedAt: now };
+    const trip: Trip = {
+      ...details,
+      id: this.db.nextId("trip"),
+      currency: "ARS",
+      budgetCents: null,
+      createdAt: now,
+      updatedAt: now,
+    };
     this.db.trips.set(trip.id, trip);
     this.db.members.push({ tripId: trip.id, userId: ownerId, role: "OWNER", joinedAt: now });
     return trip;
@@ -78,6 +89,12 @@ class InMemoryTripRepository implements TripRepository {
 
   async update(id: string, details: TripDetails): Promise<Trip> {
     const trip = { ...this.db.trips.get(id)!, ...details, updatedAt: new Date() };
+    this.db.trips.set(id, trip);
+    return trip;
+  }
+
+  async updateBudgetSettings(id: string, settings: BudgetSettings): Promise<Trip> {
+    const trip = { ...this.db.trips.get(id)!, ...settings, updatedAt: new Date() };
     this.db.trips.set(id, trip);
     return trip;
   }
@@ -182,6 +199,10 @@ class InMemoryActivityRepository implements ActivityRepository {
 
   async delete(id: string) {
     this.db.activities.delete(id);
+    // Like the database (ON DELETE SET NULL): linked costs are kept, unlinked.
+    for (const [expenseId, expense] of this.db.expenses) {
+      if (expense.activity?.id === id) this.db.expenses.set(expenseId, { ...expense, activity: null });
+    }
   }
 
   async unscheduleOutsideRange(tripId: string, start: DateOnly, end: DateOnly) {
@@ -191,6 +212,47 @@ class InMemoryActivityRepository implements ActivityRepository {
       this.db.activities.set(activity.id, { ...activity, date: null, position: position++ });
     }
     return outside.length;
+  }
+}
+
+class InMemoryExpenseRepository implements ExpenseRepository {
+  constructor(private readonly db: FakeDb) {}
+
+  async findById(id: string) {
+    return this.db.expenses.get(id) ?? null;
+  }
+
+  async listByTrip(tripId: string) {
+    return [...this.db.expenses.values()]
+      .filter((expense) => expense.tripId === tripId)
+      .sort((a, b) => b.amountCents - a.amountCents);
+  }
+
+  async create({ tripId, createdById, ...details }: NewExpense) {
+    const expense: Expense = {
+      ...this.toFields(details),
+      id: this.db.nextId("exp"),
+      tripId,
+      createdBy: { id: createdById, name: this.db.users.get(createdById)?.name ?? "?" },
+      createdAt: new Date(),
+    };
+    this.db.expenses.set(expense.id, expense);
+    return expense;
+  }
+
+  async update(id: string, details: ExpenseDetails) {
+    const expense = { ...this.db.expenses.get(id)!, ...this.toFields(details) };
+    this.db.expenses.set(id, expense);
+    return expense;
+  }
+
+  async delete(id: string) {
+    this.db.expenses.delete(id);
+  }
+
+  private toFields({ activityId, ...details }: ExpenseDetails) {
+    const activity = activityId ? this.db.activities.get(activityId) : undefined;
+    return { ...details, activity: activity ? { id: activity.id, title: activity.title } : null };
   }
 }
 
@@ -222,15 +284,17 @@ export function createTestApp() {
   const members = new InMemoryMembershipRepository(db);
   const invitations = new InMemoryInvitationRepository(db);
   const activities = new InMemoryActivityRepository(db);
+  const expenses = new InMemoryExpenseRepository(db);
   const access = new TripAccessPolicy(members);
   const clock = new FakeClock();
 
   return {
     db,
     clock,
-    repositories: { trips, members, invitations, activities },
+    repositories: { trips, members, invitations, activities, expenses },
     tripService: new TripService(trips, activities, access),
     activityService: new ActivityService(activities, trips, access),
+    budgetService: new BudgetService(expenses, trips, activities, members, access),
     membershipService: new MembershipService(members, invitations, trips, access, new SequentialTokens(), clock),
     addUser: (name: string) => db.addUser(name),
   };
