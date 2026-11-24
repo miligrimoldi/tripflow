@@ -26,6 +26,9 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 - **Presupuesto compartido**: gastos estimados por categoría (alojamiento, transporte, comidas…), opcionalmente
   vinculados a una actividad, con un presupuesto total, cuánto queda, desglose por categoría y cuánto toca por persona.
   El costo de cada actividad se ve en el itinerario.
+- **Gastos divididos** (sin necesidad de Splitwise): en cada gasto se indica quién lo pagó y entre quiénes se divide.
+  El grupo ve el saldo de cada integrante y **la menor cantidad de transferencias** para quedar a mano, puede marcar
+  cada una como pagada con un clic, registrar pagos parciales y deshacerlos.
 - **Invitación por link** (pensado para compartir por WhatsApp): vence a los 7 días y regenerarlo invalida el anterior.
 - **Roles**: quien organiza (`OWNER`) edita el viaje, invita y gestiona integrantes; quienes colaboran (`EDITOR`)
   agregan y organizan actividades.
@@ -147,6 +150,15 @@ src/
   millones, poco para un viaje en pesos) y nunca se opera con decimales. Los montos se escriben como en Argentina
   (`1.234,50`) o en inglés (`1,234.50`): `parseAmountToCents` resuelve la ambigüedad con reglas explícitas y testeadas. La
   división por persona reparte el resto centavo a centavo (`splitEvenly`), así la suma da exactamente el total.
+- **Gastos divididos y la menor cantidad de transferencias.** Un gasto sin "quién pagó" es una estimación y no genera
+  deudas; con pagador, cada participante debe su parte (en centavos enteros: el resto se reparte de a un centavo en un
+  orden fijo, así los saldos suman exactamente cero). Para saldar, minimizar la cantidad de transferencias es NP-hard
+  (contiene subset-sum), pero tiene una estructura útil: un grupo cuyos saldos suman cero se salda con (tamaño − 1)
+  transferencias, así que el mínimo es n − (máxima cantidad de subgrupos que suman cero). Con programación dinámica
+  sobre subconjuntos (O(2ⁿ·n)) se resuelve en forma exacta hasta 15 personas con saldo; para grupos más grandes se usa
+  la regla greedy (el que más debe le paga al que más le deben), que garantiza a lo sumo n − 1. Los tests comparan
+  contra fuerza bruta sobre todas las particiones posibles. Los pagos entre integrantes se guardan como movimientos
+  (`Settlement`), no como edición de gastos, así el historial queda claro y cada pago se puede deshacer.
 - **Votos idempotentes.** El caso de uso es `setVote(voted: true | false)` y no "toggle": un doble clic o un reintento
   no puede deshacer el voto. En la base, la clave primaria compuesta `(activityId, userId)` impide votar dos veces
   aunque lleguen dos requests a la vez. En la UI el voto se ve al instante (`useOptimistic`) y se confirma con el
@@ -203,6 +215,8 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Invitaciones: unirse, idempotencia, vencimiento, invalidar el link anterior, quitar integrantes y abandonar el viaje.
 - Presupuesto: parseo de montos en distintos formatos, resumen contra el presupuesto (ok / cerca del límite /
   excedido), desglose por categoría, división por persona sin perder centavos y permisos.
+- Gastos divididos: partes que suman exactamente el total, saldos con pagos parciales, quienes ya no están en el viaje,
+  y la menor cantidad de transferencias contra fuerza bruta en cientos de grupos aleatorios.
 - Recorridos: optimizador vs. fuerza bruta (con y sin horarios), heurística para días largos, anclas por horario,
   actividades sin ubicación fijas, respuesta de OSRM y fallback, y que no se aplique una sugerencia desactualizada.
 - Lugares y mapa: coordenadas válidas (ambas o ninguna, rangos), parseo de respuestas de Photon, sesgo por zona del
@@ -213,4 +227,3 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Tests de integración de los repositorios contra un Postgres efímero (Testcontainers) y tests E2E con Playwright.
 - Actualización en tiempo real (SSE o WebSockets) cuando otra persona edita el viaje.
 - Login con Google, verificación de email y recuperación de contraseña.
-- Gastos divididos: quién pagó cada gasto y quién le debe a quién, con la menor cantidad de transferencias.
