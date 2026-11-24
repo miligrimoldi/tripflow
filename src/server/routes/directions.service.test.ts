@@ -81,9 +81,24 @@ describe("DirectionsService", () => {
     expect(day.stopIds).toEqual([second.id, first.id]);
   });
 
+  it("returns the route of a single day", async () => {
+    const centro = await add("Centro", "2026-07-10", "centro");
+    const catedral = await add("Catedral", "2026-07-10", "catedral");
+    await add("Otro día", "2026-07-11", "llaoLlao");
+
+    expect(await app.directionsService.getDayDirections(ana.id, tripId, "2026-07-10")).toMatchObject({
+      date: "2026-07-10",
+      stopIds: [centro.id, catedral.id],
+    });
+    expect(await app.directionsService.getDayDirections(ana.id, tripId, "2026-07-11")).toBeNull();
+  });
+
   it("is only available to members", async () => {
     const bruno = app.addUser("Bruno");
     await expect(app.directionsService.getTripDirections(bruno.id, tripId)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(app.directionsService.getDayDirections(bruno.id, tripId, "2026-07-10")).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
   });
 });
 
