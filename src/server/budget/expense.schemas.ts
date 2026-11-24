@@ -23,8 +23,23 @@ export const expenseSchema = z
     category: z.enum(EXPENSE_CATEGORIES, { error: "Elegí una categoría" }),
     amount: amountSchema("Ingresá un monto válido, por ejemplo 15.000 o 1.234,50"),
     activityId: z.preprocess(blankToNull, z.string().max(50).nullable()).optional(),
+    paidById: z.preprocess(blankToNull, z.string().max(50).nullable()).optional(),
+    // A form sends one value per checked box: a single string or an array.
+    participantIds: z.preprocess(
+      (value) => (typeof value === "string" ? [value] : (value ?? [])),
+      z
+        .array(z.string().min(1).max(50))
+        .min(1, "Elegí al menos una persona")
+        .max(100)
+        .transform((ids) => [...new Set(ids)]),
+    ),
   })
-  .transform(({ amount, activityId, ...rest }) => ({ ...rest, amountCents: amount, activityId: activityId ?? null }));
+  .transform(({ amount, activityId, paidById, ...rest }) => ({
+    ...rest,
+    amountCents: amount,
+    activityId: activityId ?? null,
+    paidById: paidById ?? null,
+  }));
 
 export type ExpenseInput = RawInput<typeof expenseSchema>;
 
@@ -36,3 +51,14 @@ export const budgetSettingsSchema = z
   .transform(({ currency, budget }) => ({ currency, budgetCents: budget ?? null }));
 
 export type BudgetSettingsInput = RawInput<typeof budgetSettingsSchema>;
+
+export const settlementSchema = z
+  .object({
+    fromId: z.string({ error: "Elegí quién pagó" }).min(1, "Elegí quién pagó").max(50),
+    toId: z.string({ error: "Elegí a quién" }).min(1, "Elegí a quién").max(50),
+    amount: amountSchema("Ingresá un monto válido, por ejemplo 15.000 o 1.234,50"),
+  })
+  .refine(({ fromId, toId }) => fromId !== toId, { message: "Tienen que ser dos personas distintas", path: ["toId"] })
+  .transform(({ amount, ...rest }) => ({ ...rest, amountCents: amount }));
+
+export type SettlementInput = RawInput<typeof settlementSchema>;

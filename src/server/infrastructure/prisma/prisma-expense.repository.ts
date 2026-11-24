@@ -3,9 +3,13 @@ import type { Expense, ExpenseDetails, NewExpense } from "@/server/budget/expens
 import type { ExpenseRepository } from "@/server/budget/expense.repository";
 import type { Db } from "./client";
 
+const person = { select: { id: true, name: true } } as const;
+
 const expenseInclude = {
   activity: { select: { id: true, title: true } },
-  createdBy: { select: { id: true, name: true } },
+  createdBy: person,
+  paidBy: person,
+  participants: { select: { user: person }, orderBy: { user: { name: "asc" } } },
 } satisfies Prisma.ExpenseInclude;
 
 type ExpenseRow = Prisma.ExpenseGetPayload<{ include: typeof expenseInclude }>;
@@ -19,14 +23,18 @@ function toExpense(row: ExpenseRow): Expense {
     // BIGINT column; amounts are capped far below Number.MAX_SAFE_INTEGER.
     amountCents: Number(row.amountCents),
     activity: row.activity,
+    paidBy: row.paidBy,
+    participants: row.participants.map((participant) => participant.user),
     createdBy: row.createdBy,
     createdAt: row.createdAt,
   };
 }
 
-function toRowData({ description, category, amountCents, activityId }: ExpenseDetails) {
-  return { description, category, amountCents: BigInt(amountCents), activityId };
+function toRowData({ description, category, amountCents, activityId, paidById }: ExpenseDetails) {
+  return { description, category, amountCents: BigInt(amountCents), activityId, paidById };
 }
+
+const participantRows = (participantIds: string[]) => participantIds.map((userId) => ({ userId }));
 
 export class PrismaExpenseRepository implements ExpenseRepository {
   constructor(private readonly db: Db) {}
@@ -47,14 +55,27 @@ export class PrismaExpenseRepository implements ExpenseRepository {
 
   async create({ tripId, createdById, ...details }: NewExpense): Promise<Expense> {
     const row = await this.db.expense.create({
-      data: { ...toRowData(details), tripId, createdById },
+      data: {
+        ...toRowData(details),
+        tripId,
+        createdById,
+        participants: { create: participantRows(details.participantIds) },
+      },
       include: expenseInclude,
     });
     return toExpense(row);
   }
 
   async update(id: string, details: ExpenseDetails): Promise<Expense> {
-    const row = await this.db.expense.update({ where: { id }, data: toRowData(details), include: expenseInclude });
+    // Nested writes run in one transaction: the participants are replaced atomically.
+    const row = await this.db.expense.update({
+      where: { id },
+      data: {
+        ...toRowData(details),
+        participants: { deleteMany: {}, create: participantRows(details.participantIds) },
+      },
+      include: expenseInclude,
+    });
     return toExpense(row);
   }
 
