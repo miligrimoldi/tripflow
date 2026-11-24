@@ -14,7 +14,8 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 - **Categorías**, ubicación, link y notas para cada actividad, con registro de quién la agregó.
 - **Buscador de lugares**: al cargar la ubicación se sugieren lugares reales, priorizando los cercanos al viaje.
 - **Mapa del viaje**: todas las actividades ubicadas, con marcadores numerados y coloreados por día, filtro por día y el
-  recorrido de cada día en orden, para detectar días que conviene reordenar.
+  recorrido de cada día dibujado **por las calles**, con el tiempo y la distancia en auto entre cada parada y el total
+  del día.
 - **Optimización de recorridos**: para cada día, sugiere el orden que minimiza el recorrido total ("de 89,9 km a
   25,7 km, 71 % menos"). Las actividades con horario quedan fijas y el resto se reordena entre ellas; el usuario ve la
   propuesta y decide si aplicarla.
@@ -73,7 +74,9 @@ npm run dev                     # http://localhost:3000
 1. Importar el repositorio en [Vercel](https://vercel.com/new).
 2. En el proyecto, **Storage → Neon (Postgres)**: crea la base y define `DATABASE_URL` y `DATABASE_URL_UNPOOLED`.
 3. Agregar la variable `BETTER_AUTH_SECRET` (`openssl rand -base64 32`).
-4. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
+4. Opcional: `ROUTING_URL` (por ejemplo `https://router.project-osrm.org`) para recorridos por calle y tiempos en auto.
+   Sin ella, el mapa y la optimización usan distancias en línea recta.
+5. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
 
 `BETTER_AUTH_URL` toma el dominio de producción de Vercel automáticamente; solo hace falta definirla si se usa un
 dominio propio.
@@ -153,6 +156,11 @@ src/
   - Las distancias vienen de un puerto `TravelCostProvider`: por defecto, distancia en línea recta (haversine),
     instantánea y sin servicios externos; con `ROUTING_URL` usa tiempos reales en auto de OSRM y, si falla, vuelve a la
     línea recta. Al aplicar un recorrido, el servidor verifica que el día no haya cambiado mientras tanto.
+- **Recorridos en el mapa.** Un segundo puerto, `DirectionsProvider`, devuelve la línea a dibujar y la distancia y el
+  tiempo de cada tramo (servicio Route de OSRM, cacheado por secuencia de paradas). Es más lento que el resto de la
+  página, así que el server component pasa la promesa sin esperarla y el mapa la recibe en streaming: primero dibuja
+  líneas rectas punteadas y después las reemplaza por el recorrido real. Sin `ROUTING_URL`, o si OSRM falla, quedan las
+  líneas rectas con la distancia y sin tiempo, porque sin calles no hay una estimación honesta.
 - **Búsqueda de lugares por un endpoint propio** (`/api/places`), solo para usuarios logueados, con resultados
   cacheados (`"use cache"`) para no abusar de la API pública de Photon mientras se escribe. Las búsquedas se envían a
   Photon (komoot); la URL es configurable con `PHOTON_URL` para usar una instancia propia.
