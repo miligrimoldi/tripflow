@@ -10,12 +10,21 @@ interface ActivityCardProps {
   activity: Activity;
   dayOptions: DayOption[];
   canManage: boolean;
+  /** Formatted sum of the costs linked to this activity in the budget. */
+  estimatedCost?: string;
   /** Optional drag handle rendered at the start of the card. */
   dragHandle?: ReactNode;
   className?: string;
 }
 
-export function ActivityCard({ activity, dayOptions, canManage, dragHandle, className }: ActivityCardProps) {
+export function ActivityCard({
+  activity,
+  dayOptions,
+  canManage,
+  estimatedCost,
+  dragHandle,
+  className,
+}: ActivityCardProps) {
   const category = CATEGORY_META[activity.category];
 
   return (
@@ -54,6 +63,14 @@ export function ActivityCard({ activity, dayOptions, canManage, dragHandle, clas
               >
                 🔗 Ver link
               </a>
+            )}
+            {estimatedCost && (
+              <Link
+                href={`/trips/${activity.tripId}/budget`}
+                className="font-medium text-slate-700 underline-offset-2 hover:underline"
+              >
+                💰 {estimatedCost}
+              </Link>
             )}
             <span>Agregado por {activity.createdBy.name}</span>
           </div>
