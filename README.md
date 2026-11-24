@@ -7,7 +7,9 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 
 - **Cuentas** con email y contraseña.
 - **Viajes** con nombre, destino, fechas y descripción.
-- **Itinerario día por día**: cada día del viaje tiene sus actividades, con hora opcional y orden manual (↑ ↓).
+- **Itinerario día por día**: cada día del viaje tiene sus actividades, con hora opcional.
+- **Drag & drop**: arrastrar actividades para reordenarlas o moverlas entre días e ideas, también con teclado
+  (Espacio + flechas). Los cambios se ven al instante y, si no se pueden guardar, se revierten.
 - **Tablero de ideas**: actividades sin día asignado (restaurantes, excursiones, lugares…) que después se mueven a un día.
 - **Categorías**, ubicación, link y notas para cada actividad, con registro de quién la agregó.
 - **Invitación por link** (pensado para compartir por WhatsApp): vence a los 7 días y regenerarlo invalida el anterior.
@@ -133,7 +135,7 @@ src/
 La lógica de negocio se testea sin base de datos, con repositorios en memoria (`src/server/testing/in-memory.ts`):
 
 - Fechas: años bisiestos, cambios de mes y año, rangos.
-- Itinerario: armado por día, orden y reordenamiento.
+- Itinerario: armado por día y cálculo de cómo queda cada día al mover una actividad (`planMove`).
 - Viajes: validaciones, permisos y que acortar el viaje mueva actividades a Ideas.
 - Actividades: ideas vs. días programados, fechas fuera del viaje, URLs peligrosas, reordenar, mover.
 - Invitaciones: unirse, idempotencia, vencimiento, invalidar el link anterior, quitar integrantes y abandonar el viaje.
@@ -141,7 +143,6 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 ## Próximos pasos
 
 - Tests de integración de los repositorios contra un Postgres efímero (Testcontainers) y tests E2E con Playwright.
-- Drag & drop para reordenar y mover actividades entre días.
 - Actualización en tiempo real (SSE o WebSockets) cuando otra persona edita el viaje.
 - Login con Google, verificación de email y recuperación de contraseña.
 - Votos o comentarios en las ideas, gastos compartidos, mapa con las ubicaciones.

@@ -35,11 +35,6 @@ export type ActivityDetails = Pick<
   "title" | "category" | "notes" | "location" | "url" | "date" | "startTime"
 >;
 
-export function toDetails(activity: Activity): ActivityDetails {
-  const { title, category, notes, location, url, date, startTime } = activity;
-  return { title, category, notes, location, url, date, startTime };
-}
-
 export type NewActivity = ActivityDetails & {
   tripId: string;
   position: number;
@@ -88,19 +83,38 @@ export function isDateInTrip(date: DateOnly, trip: Pick<Trip, "startDate" | "end
   return isWithinRange(date, trip.startDate, trip.endDate);
 }
 
-export type MoveDirection = "up" | "down";
+/**
+ * The ordered activities of one "slot": a day of the itinerary, or the ideas
+ * board when `date` is null. `activityIds[i]` has position `i`.
+ */
+export interface SlotOrder {
+  date: DateOnly | null;
+  activityIds: string[];
+}
+
+interface MovePlan {
+  activityId: string;
+  /** Slot the activity currently belongs to. */
+  from: SlotOrder;
+  /** Destination slot (may be the same as `from`). */
+  to: SlotOrder;
+  /** Destination index; clamped to the slot bounds, `undefined` appends at the end. */
+  index?: number;
+}
 
 /**
- * Returns the ids of `items` in their new order after moving `id` one slot
- * in `direction`. Returns `null` when the move is not possible (already at
- * the edge or id not found).
+ * Computes the new order of the affected slots when an activity is moved.
+ * Returns one slot when reordering inside the same day and two when the
+ * activity changes day (the source without it, the target with it).
  */
-export function reorder(items: Pick<Activity, "id">[], id: string, direction: MoveDirection): string[] | null {
-  const ids = items.map((item) => item.id);
-  const from = ids.indexOf(id);
-  const to = direction === "up" ? from - 1 : from + 1;
-  if (from === -1 || to < 0 || to >= ids.length) return null;
+export function planMove({ activityId, from, to, index }: MovePlan): SlotOrder[] {
+  const withoutActivity = (ids: string[]) => ids.filter((id) => id !== activityId);
 
-  [ids[from], ids[to]] = [ids[to], ids[from]];
-  return ids;
+  const targetIds = withoutActivity(to.activityIds);
+  const at = Math.min(Math.max(index ?? targetIds.length, 0), targetIds.length);
+  targetIds.splice(at, 0, activityId);
+
+  const target = { date: to.date, activityIds: targetIds };
+  if (from.date === to.date) return [target];
+  return [{ date: from.date, activityIds: withoutActivity(from.activityIds) }, target];
 }

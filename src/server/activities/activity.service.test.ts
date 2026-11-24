@@ -65,49 +65,70 @@ describe("ActivityService", () => {
     });
   });
 
-  describe("schedule", () => {
-    it("moves an idea into a day and back to ideas", async () => {
-      const idea = await app.activityService.create(ana.id, tripId, { title: "Kayak" });
+  describe("move", () => {
+    const create = (title: string, date?: string) => app.activityService.create(ana.id, tripId, { title, date });
 
-      await app.activityService.schedule(ana.id, idea.id, { date: "2026-07-12" });
+    it("moves an idea into a day and back to ideas", async () => {
+      const idea = await create("Kayak");
+
+      await app.activityService.move(ana.id, idea.id, { date: "2026-07-12" });
       let itinerary = await app.activityService.getItinerary(ana.id, tripId);
       expect(titles(itinerary.days[2].activities)).toEqual(["Kayak"]);
       expect(itinerary.ideas).toHaveLength(0);
 
-      await app.activityService.schedule(ana.id, idea.id, { date: "" });
+      await app.activityService.move(ana.id, idea.id, { date: "" });
       itinerary = await app.activityService.getItinerary(ana.id, tripId);
       expect(titles(itinerary.ideas)).toEqual(["Kayak"]);
     });
 
-    it("places the activity last in the target day", async () => {
-      await app.activityService.create(ana.id, tripId, { title: "Primero", date: "2026-07-10" });
-      const idea = await app.activityService.create(ana.id, tripId, { title: "Segundo" });
+    it("appends at the end of the day when no index is given", async () => {
+      await create("Primero", "2026-07-10");
+      const idea = await create("Segundo");
 
-      await app.activityService.schedule(ana.id, idea.id, { date: "2026-07-10" });
+      await app.activityService.move(ana.id, idea.id, { date: "2026-07-10" });
 
       const { days } = await app.activityService.getItinerary(ana.id, tripId);
       expect(titles(days[0].activities)).toEqual(["Primero", "Segundo"]);
     });
-  });
 
-  describe("move", () => {
-    it("reorders activities within the same day", async () => {
-      await app.activityService.create(ana.id, tripId, { title: "A", date: "2026-07-10" });
-      const b = await app.activityService.create(ana.id, tripId, { title: "B", date: "2026-07-10" });
-      await app.activityService.create(ana.id, tripId, { title: "C", date: "2026-07-10" });
+    it("inserts at the given position of another day (drag & drop)", async () => {
+      await create("A", "2026-07-10");
+      await create("B", "2026-07-10");
+      const c = await create("C", "2026-07-11");
 
-      await app.activityService.move(ana.id, b.id, "up");
+      await app.activityService.move(ana.id, c.id, { date: "2026-07-10", index: "1" });
 
       const { days } = await app.activityService.getItinerary(ana.id, tripId);
-      expect(titles(days[0].activities)).toEqual(["B", "A", "C"]);
+      expect(titles(days[0].activities)).toEqual(["A", "C", "B"]);
+      expect(days[1].activities).toHaveLength(0);
     });
 
-    it("ignores moves past the edges", async () => {
-      const a = await app.activityService.create(ana.id, tripId, { title: "A" });
-      await app.activityService.move(ana.id, a.id, "up");
+    it("reorders inside the same day", async () => {
+      await create("A", "2026-07-10");
+      await create("B", "2026-07-10");
+      const c = await create("C", "2026-07-10");
 
-      const { ideas } = await app.activityService.getItinerary(ana.id, tripId);
-      expect(titles(ideas)).toEqual(["A"]);
+      await app.activityService.move(ana.id, c.id, { date: "2026-07-10", index: 0 });
+
+      const { days } = await app.activityService.getItinerary(ana.id, tripId);
+      expect(titles(days[0].activities)).toEqual(["C", "A", "B"]);
+    });
+
+    it("rejects days outside the trip and invalid indexes", async () => {
+      const idea = await create("Kayak");
+      await expect(app.activityService.move(ana.id, idea.id, { date: "2026-08-01" })).rejects.toBeInstanceOf(
+        ValidationError,
+      );
+      await expect(app.activityService.move(ana.id, idea.id, { date: null, index: -1 })).rejects.toBeInstanceOf(
+        ValidationError,
+      );
+    });
+
+    it("does not let non-members move activities", async () => {
+      const idea = await create("Kayak");
+      await expect(app.activityService.move(bruno.id, idea.id, { date: "2026-07-10" })).rejects.toBeInstanceOf(
+        NotFoundError,
+      );
     });
   });
 

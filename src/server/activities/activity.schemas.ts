@@ -21,5 +21,9 @@ export const activityDetailsSchema = z.object({
 
 export type ActivityDetailsInput = RawInput<typeof activityDetailsSchema>;
 
-export const scheduleSchema = z.object({ date: optionalDateOnlySchema });
-export type ScheduleInput = RawInput<typeof scheduleSchema>;
+/** Destination of a move: a day (or `null` for ideas) and, optionally, a position in it. */
+export const moveSchema = z.object({
+  date: optionalDateOnlySchema,
+  index: z.coerce.number().int().min(0).optional(),
+});
+export type MoveInput = RawInput<typeof moveSchema>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildItinerary, reorder, type Activity } from "./activity";
+import { buildItinerary, planMove, type Activity } from "./activity";
 
 const activity = (id: string, date: string | null, position: number): Activity => ({
   id,
@@ -45,20 +45,38 @@ describe("buildItinerary", () => {
   });
 });
 
-describe("reorder", () => {
-  const items = [{ id: "a" }, { id: "b" }, { id: "c" }];
+describe("planMove", () => {
+  const day1 = { date: "2026-03-01", activityIds: ["a", "b", "c"] };
+  const day2 = { date: "2026-03-02", activityIds: ["x", "y"] };
 
-  it("moves an item up", () => {
-    expect(reorder(items, "b", "up")).toEqual(["b", "a", "c"]);
+  it("reorders inside the same day", () => {
+    expect(planMove({ activityId: "c", from: day1, to: day1, index: 0 })).toEqual([
+      { date: "2026-03-01", activityIds: ["c", "a", "b"] },
+    ]);
   });
 
-  it("moves an item down", () => {
-    expect(reorder(items, "b", "down")).toEqual(["a", "c", "b"]);
+  it("moves to another day at the given index, removing it from the source", () => {
+    expect(planMove({ activityId: "b", from: day1, to: day2, index: 1 })).toEqual([
+      { date: "2026-03-01", activityIds: ["a", "c"] },
+      { date: "2026-03-02", activityIds: ["x", "b", "y"] },
+    ]);
   });
 
-  it("returns null when the move is not possible", () => {
-    expect(reorder(items, "a", "up")).toBeNull();
-    expect(reorder(items, "c", "down")).toBeNull();
-    expect(reorder(items, "missing", "up")).toBeNull();
+  it("appends at the end when no index is given", () => {
+    const [, target] = planMove({ activityId: "a", from: day1, to: day2 });
+    expect(target.activityIds).toEqual(["x", "y", "a"]);
+  });
+
+  it("clamps out-of-range indexes", () => {
+    expect(planMove({ activityId: "a", from: day1, to: day1, index: 99 })[0].activityIds).toEqual(["b", "c", "a"]);
+  });
+
+  it("can move an idea into an empty day", () => {
+    const ideas = { date: null, activityIds: ["idea"] };
+    const empty = { date: "2026-03-03", activityIds: [] };
+    expect(planMove({ activityId: "idea", from: ideas, to: empty, index: 0 })).toEqual([
+      { date: null, activityIds: [] },
+      { date: "2026-03-03", activityIds: ["idea"] },
+    ]);
   });
 });

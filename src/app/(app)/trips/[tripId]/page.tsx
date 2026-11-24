@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, Skeleton } from "@/components/ui/card";
 import { createActivityAction } from "@/features/activities/actions";
-import { ActivityCard } from "@/features/activities/components/activity-card";
-import { ActivityForm, type DayOption } from "@/features/activities/components/activity-form";
+import { toBoardSlots } from "@/features/activities/board";
+import { ActivityForm } from "@/features/activities/components/activity-form";
+import { ItineraryBoard } from "@/features/activities/components/itinerary-board";
 import { toDayOptions } from "@/features/activities/day-options";
 import { TripHeader } from "@/features/trips/components/trip-header";
 import { tripMetadata } from "@/features/trips/metadata";
 import { formatDayLong } from "@/lib/format";
 import { orNotFound } from "@/lib/page-data";
-import type { Activity } from "@/server/activities/activity";
 import { requireUser } from "@/server/auth/session";
 import { activityService, membershipService, tripService } from "@/server/container";
 import { hasPermission } from "@/server/members/member";
@@ -43,33 +43,17 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
   return (
     <div className="space-y-8">
       <TripHeader trip={trip} members={members} active="itinerary" />
-
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <section aria-labelledby="itinerary-title" className="space-y-6">
-          <h2 id="itinerary-title" className="sr-only">
-            Itinerario
-          </h2>
-          {itinerary.days.map((day) => (
-            <div key={day.date} className="space-y-3">
-              <h3 className="flex items-baseline gap-3">
-                <span className="rounded-md bg-brand-600 px-2 py-0.5 text-sm font-semibold text-white">
-                  Día {day.dayNumber}
-                </span>
-                <span className="font-medium text-slate-700">{formatDayLong(day.date)}</span>
-              </h3>
-              {day.activities.length > 0 ? (
-                <ActivityList activities={day.activities} dayOptions={dayOptions} canManage={canManage} />
-              ) : (
-                <p className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500">
-                  Nada planeado todavía. Agregá una actividad o mové una idea a este día.
-                </p>
-              )}
-            </div>
-          ))}
-        </section>
-
-        <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">
-          {canManage && (
+      <ItineraryBoard
+        days={itinerary.days.map((day) => ({
+          date: day.date,
+          dayNumber: day.dayNumber,
+          label: formatDayLong(day.date),
+        }))}
+        slots={toBoardSlots(itinerary)}
+        dayOptions={dayOptions}
+        canManage={canManage}
+        sidebar={
+          canManage && (
             <Card className="p-5">
               <h2 className="mb-4 font-semibold text-slate-900">Agregar actividad</h2>
               <ActivityForm
@@ -78,52 +62,10 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
                 submitLabel="Agregar"
               />
             </Card>
-          )}
-
-          <section aria-labelledby="ideas-title" className="space-y-3">
-            <div>
-              <h2 id="ideas-title" className="font-semibold text-slate-900">
-                💡 Ideas <span className="text-slate-500">({itinerary.ideas.length})</span>
-              </h2>
-              <p className="text-xs text-slate-500">Lugares y planes que todavía no tienen día.</p>
-            </div>
-            {itinerary.ideas.length > 0 ? (
-              <ActivityList activities={itinerary.ideas} dayOptions={dayOptions} canManage={canManage} />
-            ) : (
-              <p className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-center text-sm text-slate-500">
-                Sin ideas guardadas. ¿Algún restaurante o excursión que les interese?
-              </p>
-            )}
-          </section>
-        </aside>
-      </div>
+          )
+        }
+      />
     </div>
-  );
-}
-
-function ActivityList({
-  activities,
-  dayOptions,
-  canManage,
-}: {
-  activities: Activity[];
-  dayOptions: DayOption[];
-  canManage: boolean;
-}) {
-  return (
-    <ol className="space-y-3">
-      {activities.map((activity, index) => (
-        <li key={activity.id}>
-          <ActivityCard
-            activity={activity}
-            dayOptions={dayOptions}
-            canManage={canManage}
-            isFirst={index === 0}
-            isLast={index === activities.length - 1}
-          />
-        </li>
-      ))}
-    </ol>
   );
 }
 
