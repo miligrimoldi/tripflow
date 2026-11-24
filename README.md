@@ -17,6 +17,9 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 - **Buscador de lugares**: al cargar la ubicación se sugieren lugares reales, priorizando los cercanos al viaje.
 - **Foto de portada**: cada viaje muestra una foto real de su destino (de Wikipedia) y quien organiza puede subir la
   suya.
+- **Vista "Hoy"** (pensada para el celular durante el viaje): el clima del día, la próxima actividad en grande con
+  cuenta regresiva, foto y botón "Cómo llegar", una línea de tiempo con el "ahora" en vivo (en la zona horaria del
+  destino), el tiempo entre paradas y el mapa del día. Antes o después del viaje funciona como agenda día a día.
 - **Mapa del viaje**: todas las actividades ubicadas, con marcadores numerados y coloreados por día, filtro por día y el
   recorrido de cada día dibujado **por las calles**, con el tiempo y la distancia en auto entre cada parada y el total
   del día.
@@ -169,6 +172,13 @@ src/
   un puerto `ExchangeRateSource` con dos adaptadores: DolarApi para todo lo que involucra pesos argentinos (con los
   distintos tipos de dólar, tarjeta primero porque es lo más común afuera) y Frankfurter (BCE) entre otras monedas. Si
   la fuente falla no hay error, solo no hay sugerencia. Las cotizaciones se escriben como en Argentina ("2.099,5").
+- **Vista "Hoy".** El "ahora" se calcula en la zona horaria del destino, que viene con el pronóstico de Open-Meteo
+  (gratis, sin API key): si el servidor corre en UTC o quien mira está en otro país, igual ve la hora de Bariloche. El
+  cliente lee la hora con `useSyncExternalStore` (en el servidor es `null`), así no hay diferencias de hidratación y se
+  actualiza cada 30 segundos. La lógica (qué día mostrar, qué ya pasó, cuál es la próxima actividad) son funciones
+  puras con tests. Las fotos de las actividades salen de Wikipedia solo si el título del artículo coincide con la
+  actividad: una búsqueda siempre devuelve algo ("Desayuno en el Centro Cívico" encuentra a una conductora de TV) y una
+  foto equivocada es peor que ninguna.
 - **Votos idempotentes.** El caso de uso es `setVote(voted: true | false)` y no "toggle": un doble clic o un reintento
   no puede deshacer el voto. En la base, la clave primaria compuesta `(activityId, userId)` impide votar dos veces
   aunque lleguen dos requests a la vez. En la UI el voto se ve al instante (`useOptimistic`) y se confirma con el
@@ -231,6 +241,8 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
   y la menor cantidad de transferencias contra fuerza bruta en cientos de grupos aleatorios.
 - Recorridos: optimizador vs. fuerza bruta (con y sin horarios), heurística para días largos, anclas por horario,
   actividades sin ubicación fijas, respuesta de OSRM y fallback, y que no se aplique una sugerencia desactualizada.
+- Vista "Hoy": día por defecto, qué ya pasó y dónde va el "ahora", tramos solo entre paradas consecutivas, clima (códigos
+  WMO y respuesta de Open-Meteo), zona horaria cerca de la medianoche y qué fotos de actividades son confiables.
 - Lugares y mapa: coordenadas válidas (ambas o ninguna, rangos), parseo de respuestas de Photon, sesgo por zona del
   viaje y armado de las capas del mapa por día.
 

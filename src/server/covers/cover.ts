@@ -9,6 +9,8 @@ export interface TripCover {
 /** A photo of a destination found in an external source. */
 export interface DestinationPhoto {
   url: string;
+  /** What the photo is of (e.g. the article it illustrates: "Museo de la Patagonia"). */
+  title: string;
   /** Page with the photo's author and license. */
   creditUrl: string;
 }

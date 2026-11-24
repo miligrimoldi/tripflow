@@ -1,5 +1,5 @@
 import type { ActivityRepository } from "../activities/activity.repository";
-import { buildItinerary } from "../activities/activity";
+import { buildItinerary, type Activity } from "../activities/activity";
 import type { TripAccessPolicy } from "../members/trip-access";
 import type { DateOnly } from "../shared/date-only";
 import { NotFoundError } from "../shared/errors";
@@ -15,7 +15,7 @@ export interface DayDirections extends Directions {
 
 export class DirectionsService {
   constructor(
-    private readonly activities: Pick<ActivityRepository, "listByTrip">,
+    private readonly activities: Pick<ActivityRepository, "listByTrip" | "listBySlot">,
     private readonly trips: Pick<TripRepository, "findById">,
     private readonly provider: DirectionsProvider,
     private readonly access: TripAccessPolicy,
@@ -35,14 +35,25 @@ export class DirectionsService {
     const result: DayDirections[] = [];
     // One day at a time: routing APIs are rate-limited and a trip has few days.
     for (const day of itinerary.days) {
-      const stops = day.activities.flatMap((activity) =>
-        activity.coordinates ? [{ id: activity.id, coordinates: activity.coordinates }] : [],
-      );
-      if (stops.length < 2) continue;
-
-      const directions = await this.provider.directions(stops.map((stop) => stop.coordinates));
-      result.push({ date: day.date, stopIds: stops.map((stop) => stop.id), ...directions });
+      const directions = await this.directionsFor(day.date, day.activities);
+      if (directions) result.push(directions);
     }
     return result;
+  }
+
+  /** Route of one day, or `null` if it has fewer than two stops on the map. */
+  async getDayDirections(userId: string, tripId: string, date: DateOnly): Promise<DayDirections | null> {
+    await this.access.require(tripId, userId, "trip:view");
+    return this.directionsFor(date, await this.activities.listBySlot(tripId, date));
+  }
+
+  /** `activities` in visiting order. */
+  private async directionsFor(date: DateOnly, activities: Activity[]): Promise<DayDirections | null> {
+    const stops = activities.flatMap((activity) =>
+      activity.coordinates ? [{ id: activity.id, coordinates: activity.coordinates }] : [],
+    );
+    if (stops.length < 2) return null;
+    const directions = await this.provider.directions(stops.map((stop) => stop.coordinates));
+    return { date, stopIds: stops.map((stop) => stop.id), ...directions };
   }
 }

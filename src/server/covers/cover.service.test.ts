@@ -7,7 +7,11 @@ import { CoverService } from "./cover.service";
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]);
-const BARILOCHE = { url: "https://photos.test/catedral.jpg", creditUrl: "https://commons.test/File:Catedral.jpg" };
+const BARILOCHE = {
+  url: "https://photos.test/catedral.jpg",
+  title: "San Carlos de Bariloche",
+  creditUrl: "https://commons.test/File:Catedral.jpg",
+};
 
 describe("CoverService", () => {
   let app: ReturnType<typeof createTestApp>;
