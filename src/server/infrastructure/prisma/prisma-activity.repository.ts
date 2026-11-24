@@ -18,6 +18,8 @@ function toActivity(row: ActivityRow): Activity {
     category: row.category,
     notes: row.notes,
     location: row.location,
+    coordinates:
+      row.latitude !== null && row.longitude !== null ? { latitude: row.latitude, longitude: row.longitude } : null,
     url: row.url,
     date: row.date ? dateOnlyFromDate(row.date) : null,
     startTime: row.startTime,
@@ -34,6 +36,8 @@ function toRowData(details: ActivityDetails) {
     category: details.category,
     notes: details.notes,
     location: details.location,
+    latitude: details.coordinates?.latitude ?? null,
+    longitude: details.coordinates?.longitude ?? null,
     url: details.url,
     date: details.date ? dateOnlyToDate(details.date) : null,
     startTime: details.startTime,

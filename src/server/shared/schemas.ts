@@ -37,6 +37,14 @@ export const optionalTimeSchema = blankable(
   z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Ingresá una hora válida (HH:mm)"),
 );
 
+/** Optional coordinate component (latitude or longitude) within ±`limit` degrees. */
+export const optionalCoordinateSchema = (limit: number) =>
+  blankable(
+    z.coerce
+      .number({ error: "Coordenada inválida" })
+      .refine((value) => Number.isFinite(value) && Math.abs(value) <= limit, "Coordenada inválida"),
+  );
+
 export const optionalUrlSchema = blankable(
   z.url({ protocol: /^https?$/, error: "Ingresá un link válido (http o https)" }).max(2000),
 );

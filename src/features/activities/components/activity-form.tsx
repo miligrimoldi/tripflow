@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { FormAlert } from "@/components/ui/form-alert";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { fieldError, idleState, submittedValue, type ActionState } from "@/lib/action-state";
 import { ACTIVITY_CATEGORIES, type ActivityDetails } from "@/server/activities/activity";
+import type { Coordinates } from "@/server/shared/coordinates";
+import { PlaceInput } from "@/features/places/components/place-input";
 import { CATEGORY_META } from "../categories";
 
 export interface DayOption {
@@ -17,12 +19,26 @@ interface ActivityFormProps {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   dayOptions: DayOption[];
   initial?: Partial<ActivityDetails>;
+  /** Where the trip is, to suggest nearby places first. */
+  near?: Coordinates | null;
   submitLabel: string;
 }
 
-export function ActivityForm({ action, dayOptions, initial, submitLabel }: ActivityFormProps) {
+type TextField = Exclude<keyof ActivityDetails, "coordinates">;
+
+export function ActivityForm({ action, dayOptions, initial, near, submitLabel }: ActivityFormProps) {
   const [state, formAction] = useActionState(action, idleState);
-  const value = (field: keyof ActivityDetails) => submittedValue(state, field) ?? initial?.[field] ?? "";
+  const value = (field: TextField) => submittedValue(state, field) ?? initial?.[field] ?? "";
+
+  // The place field keeps its own state, so it must be remounted to clear it
+  // after a successful submit (the browser only resets uncontrolled inputs).
+  const [placeKey, setPlaceKey] = useState(0);
+  const [lastState, setLastState] = useState(state);
+  if (state !== lastState) {
+    setLastState(state);
+    if (state.status === "success") setPlaceKey((key) => key + 1);
+  }
+  const submittedCoordinates = submittedPoint(submittedValue(state, "latitude"), submittedValue(state, "longitude"));
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
@@ -61,10 +77,19 @@ export function ActivityForm({ action, dayOptions, initial, submitLabel }: Activ
         <Field label="Hora (opcional)" error={fieldError(state, "startTime")}>
           {(props) => <Input {...props} name="startTime" type="time" defaultValue={value("startTime")} />}
         </Field>
-        <Field label="Ubicación (opcional)" error={fieldError(state, "location")}>
-          {(props) => <Input {...props} name="location" placeholder="Palermo" defaultValue={value("location")} />}
-        </Field>
       </div>
+      <Field label="Ubicación (opcional)" error={fieldError(state, "location")}>
+        {(props) => (
+          <PlaceInput
+            {...props}
+            key={placeKey}
+            placeholder="Buscá un lugar: Cerro Catedral, Torre Eiffel…"
+            defaultLabel={value("location")}
+            defaultCoordinates={state.status === "error" ? submittedCoordinates : (initial?.coordinates ?? null)}
+            near={near}
+          />
+        )}
+      </Field>
       <Field label="Link (opcional)" error={fieldError(state, "url")}>
         {(props) => <Input {...props} name="url" type="url" placeholder="https://…" defaultValue={value("url")} />}
       </Field>
@@ -84,4 +109,9 @@ export function ActivityForm({ action, dayOptions, initial, submitLabel }: Activ
       </SubmitButton>
     </form>
   );
+}
+
+function submittedPoint(latitude?: string, longitude?: string): Coordinates | null {
+  if (!latitude || !longitude) return null;
+  return { latitude: Number(latitude), longitude: Number(longitude) };
 }

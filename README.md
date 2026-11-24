@@ -12,6 +12,9 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
   (Espacio + flechas). Los cambios se ven al instante y, si no se pueden guardar, se revierten.
 - **Tablero de ideas**: actividades sin día asignado (restaurantes, excursiones, lugares…) que después se mueven a un día.
 - **Categorías**, ubicación, link y notas para cada actividad, con registro de quién la agregó.
+- **Buscador de lugares**: al cargar la ubicación se sugieren lugares reales, priorizando los cercanos al viaje.
+- **Mapa del viaje**: todas las actividades ubicadas, con marcadores numerados y coloreados por día, filtro por día y el
+  recorrido de cada día en orden, para detectar días que conviene reordenar.
 - **Invitación por link** (pensado para compartir por WhatsApp): vence a los 7 días y regenerarlo invalida el anterior.
 - **Roles**: quien organiza (`OWNER`) edita el viaje, invita y gestiona integrantes; quienes colaboran (`EDITOR`)
   agregan y organizan actividades.
@@ -19,16 +22,17 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 
 ## Stack
 
-| Capa          | Tecnología                                                            |
-| ------------- | --------------------------------------------------------------------- |
-| Framework     | Next.js 16 (App Router, Server Actions, Cache Components) + React 19  |
-| Lenguaje      | TypeScript (strict)                                                   |
-| Estilos       | Tailwind CSS 4                                                        |
-| Base de datos | PostgreSQL 17 (Docker) + Prisma 7 (driver adapter `pg`)               |
-| Auth          | Better Auth (email + contraseña, sesiones en base de datos)           |
-| Validación    | Zod 4                                                                 |
-| Testing       | Vitest                                                                |
-| Calidad       | ESLint, Prettier, GitHub Actions (lint, formato, tipos, tests, build) |
+| Capa          | Tecnología                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| Framework     | Next.js 16 (App Router, Server Actions, Cache Components) + React 19                       |
+| Lenguaje      | TypeScript (strict)                                                                        |
+| Estilos       | Tailwind CSS 4                                                                             |
+| Base de datos | PostgreSQL 17 (Docker) + Prisma 7 (driver adapter `pg`)                                    |
+| Auth          | Better Auth (email + contraseña, sesiones en base de datos)                                |
+| Mapas         | MapLibre GL + OpenFreeMap (mapas) y Photon (búsqueda de lugares), todo sobre OpenStreetMap |
+| Validación    | Zod 4                                                                                      |
+| Testing       | Vitest                                                                                     |
+| Calidad       | ESLint, Prettier, GitHub Actions (lint, formato, tipos, tests, build)                      |
 
 > **¿Por qué Better Auth y no Auth.js?** Auth.js v5 sigue en beta y desde 2025 lo mantiene el equipo de Better Auth,
 > que lo recomienda para proyectos nuevos. Además, Better Auth guarda sesiones en Postgres vía Prisma sin configuración
@@ -110,8 +114,9 @@ src/
   intercambiables: los mismos servicios corren en producción y en tests.
 - **I — Segregación de interfaces.** Los servicios piden solo lo que usan, por ejemplo
   `Pick<ActivityRepository, "unscheduleOutsideRange">` en `TripService`.
-- **D — Inversión de dependencias.** Los servicios dependen de interfaces (`TripRepository`, `Clock`, `TokenGenerator`)
-  inyectadas por constructor. Solo `container.ts` conoce las clases concretas.
+- **D — Inversión de dependencias.** Los servicios dependen de interfaces (`TripRepository`, `PlaceSearch`, `Clock`,
+  `TokenGenerator`) inyectadas por constructor. Solo `container.ts` conoce las clases concretas: cambiar Photon por
+  otro proveedor de búsqueda de lugares es escribir un adaptador nuevo.
 
 ### Otras decisiones de diseño
 
@@ -127,6 +132,9 @@ src/
   los links de las actividades solo aceptan `http(s)` y los tokens de invitación son aleatorios (192 bits).
 - **Formularios con mejora progresiva.** Server Actions + `useActionState`. Tras un error, el formulario conserva lo que
   se escribió (excepto contraseñas).
+- **Búsqueda de lugares por un endpoint propio** (`/api/places`), solo para usuarios logueados, con resultados
+  cacheados (`"use cache"`) para no abusar de la API pública de Photon mientras se escribe. Las búsquedas se envían a
+  Photon (komoot); la URL es configurable con `PHOTON_URL` para usar una instancia propia.
 - **Cache Components.** Las partes que dependen de la sesión se transmiten dentro de `<Suspense>`, mientras el resto de
   cada página se prerenderiza.
 
@@ -139,11 +147,14 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Viajes: validaciones, permisos y que acortar el viaje mueva actividades a Ideas.
 - Actividades: ideas vs. días programados, fechas fuera del viaje, URLs peligrosas, reordenar, mover.
 - Invitaciones: unirse, idempotencia, vencimiento, invalidar el link anterior, quitar integrantes y abandonar el viaje.
+- Lugares y mapa: coordenadas válidas (ambas o ninguna, rangos), parseo de respuestas de Photon, sesgo por zona del
+  viaje y armado de las capas del mapa por día.
 
 ## Próximos pasos
 
 - Tests de integración de los repositorios contra un Postgres efímero (Testcontainers) y tests E2E con Playwright.
 - Actualización en tiempo real (SSE o WebSockets) cuando otra persona edita el viaje.
 - Login con Google, verificación de email y recuperación de contraseña.
-- Votos o comentarios en las ideas, gastos compartidos, mapa con las ubicaciones.
-- Deploy (Vercel + Neon/Supabase) con `prisma migrate deploy` en el pipeline.
+- Presupuesto compartido.
+- Votos o comentarios en las ideas.
+- Mapa: rutas reales por calle (en vez de líneas rectas) y sugerir el orden más corto para cada día.

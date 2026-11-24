@@ -7,8 +7,9 @@ import { updateActivityAction } from "@/features/activities/actions";
 import { ActivityForm } from "@/features/activities/components/activity-form";
 import { toDayOptions } from "@/features/activities/day-options";
 import { orNotFound } from "@/lib/page-data";
+import { itineraryPoints } from "@/server/activities/activity";
 import { requireUser } from "@/server/auth/session";
-import { activityService, tripService } from "@/server/container";
+import { activityService, placeService, tripService } from "@/server/container";
 import { hasPermission } from "@/server/members/member";
 
 export const metadata: Metadata = { title: "Editar actividad" };
@@ -28,10 +29,15 @@ export default function EditActivityPage({ params }: Props) {
 async function EditActivity({ params }: Pick<Props, "params">) {
   const { tripId, activityId } = await params;
   const user = await requireUser();
-  const [{ trip, role }, activity] = await orNotFound(
-    Promise.all([tripService.get(user.id, tripId), activityService.get(user.id, activityId)]),
+  const [{ trip, role }, activity, itinerary] = await orNotFound(
+    Promise.all([
+      tripService.get(user.id, tripId),
+      activityService.get(user.id, activityId),
+      activityService.getItinerary(user.id, tripId),
+    ]),
   );
   if (activity.tripId !== trip.id || !hasPermission(role, "activity:manage")) notFound();
+  const near = await placeService.tripArea(trip.destination, itineraryPoints(itinerary));
 
   return (
     <div className="space-y-6">
@@ -46,6 +52,7 @@ async function EditActivity({ params }: Pick<Props, "params">) {
           action={updateActivityAction.bind(null, activity.id)}
           dayOptions={toDayOptions(trip)}
           initial={activity}
+          near={near}
           submitLabel="Guardar cambios"
         />
       </Card>

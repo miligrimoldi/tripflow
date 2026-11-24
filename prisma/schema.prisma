@@ -156,6 +156,9 @@ model Activity {
   category    ActivityCategory @default(OTHER)
   notes       String?
   location    String?
+  /// Coordinates of `location`, when it was picked from the place search.
+  latitude    Float?
+  longitude   Float?
   url         String?
   date        DateTime?        @db.Date
   /// "HH:mm" local time, optional.

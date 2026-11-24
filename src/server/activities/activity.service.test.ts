@@ -52,6 +52,41 @@ describe("ActivityService", () => {
       ).rejects.toMatchObject({ fieldErrors: { url: expect.any(Array), startTime: expect.any(Array) } });
     });
 
+    it("stores coordinates when the location was picked from the place search", async () => {
+      const activity = await app.activityService.create(ana.id, tripId, {
+        title: "Cerro Catedral",
+        location: "Cerro Catedral, Bariloche",
+        latitude: "-41.166895",
+        longitude: "-71.4642673",
+      });
+      expect(activity.coordinates).toEqual({ latitude: -41.166895, longitude: -71.4642673 });
+    });
+
+    it("keeps free-text locations without coordinates", async () => {
+      const activity = await app.activityService.create(ana.id, tripId, {
+        title: "X",
+        location: "Centro",
+        latitude: "",
+      });
+      expect(activity).toMatchObject({ location: "Centro", coordinates: null });
+    });
+
+    it.each([
+      [{ latitude: "-41.1", longitude: "" }, "only one coordinate"],
+      [{ latitude: "-141.1", longitude: "-71.4" }, "latitude out of range"],
+      [{ latitude: "-41.1", longitude: "abc" }, "non-numeric longitude"],
+    ])("rejects invalid coordinates (%j: %s)", async (coordinates) => {
+      await expect(
+        app.activityService.create(ana.id, tripId, { title: "X", location: "Algún lugar", ...coordinates }),
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("requires a location name when there are coordinates", async () => {
+      await expect(
+        app.activityService.create(ana.id, tripId, { title: "X", latitude: "-41.1", longitude: "-71.4" }),
+      ).rejects.toMatchObject({ fieldErrors: { location: expect.any(Array) } });
+    });
+
     it("does not let non-members add activities", async () => {
       await expect(app.activityService.create(bruno.id, tripId, { title: "Intruso" })).rejects.toBeInstanceOf(
         NotFoundError,

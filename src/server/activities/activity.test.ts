@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildItinerary, planMove, type Activity } from "./activity";
+import { buildItinerary, itineraryPoints, planMove, type Activity } from "./activity";
 
 const activity = (id: string, date: string | null, position: number): Activity => ({
   id,
@@ -8,6 +8,7 @@ const activity = (id: string, date: string | null, position: number): Activity =
   category: "OTHER",
   notes: null,
   location: null,
+  coordinates: null,
   url: null,
   date,
   startTime: null,
@@ -78,5 +79,20 @@ describe("planMove", () => {
       { date: null, activityIds: [] },
       { date: "2026-03-03", activityIds: ["idea"] },
     ]);
+  });
+});
+
+describe("itineraryPoints", () => {
+  it("collects the coordinates of scheduled activities and ideas", () => {
+    const located = (id: string, date: string | null, latitude: number) => ({
+      ...activity(id, date, 0),
+      coordinates: { latitude, longitude: -71 },
+    });
+    const itinerary = buildItinerary({ startDate: "2026-03-01", endDate: "2026-03-02" }, [
+      located("a", "2026-03-01", -41),
+      activity("free-text", "2026-03-01", 1),
+      located("idea", null, -42),
+    ]);
+    expect(itineraryPoints(itinerary).map((p) => p.latitude)).toEqual([-41, -42]);
   });
 });

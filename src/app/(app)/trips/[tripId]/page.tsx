@@ -10,8 +10,9 @@ import { TripHeader } from "@/features/trips/components/trip-header";
 import { tripMetadata } from "@/features/trips/metadata";
 import { formatDayLong } from "@/lib/format";
 import { orNotFound } from "@/lib/page-data";
+import { itineraryPoints } from "@/server/activities/activity";
 import { requireUser } from "@/server/auth/session";
-import { activityService, membershipService, tripService } from "@/server/container";
+import { activityService, membershipService, placeService, tripService } from "@/server/container";
 import { hasPermission } from "@/server/members/member";
 
 export async function generateMetadata({ params }: PageProps<"/trips/[tripId]">): Promise<Metadata> {
@@ -39,6 +40,7 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
 
   const canManage = hasPermission(role, "activity:manage");
   const dayOptions = toDayOptions(trip);
+  const near = canManage ? await placeService.tripArea(trip.destination, itineraryPoints(itinerary)) : null;
 
   return (
     <div className="space-y-8">
@@ -59,6 +61,7 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
               <ActivityForm
                 action={createActivityAction.bind(null, trip.id)}
                 dayOptions={dayOptions}
+                near={near}
                 submitLabel="Agregar"
               />
             </Card>
