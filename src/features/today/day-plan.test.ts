@@ -51,7 +51,7 @@ describe("buildDayPlan", () => {
   });
 
   it("works without directions and adds known photos", () => {
-    const plan = buildDayPlan([activity("a")], null, new Map([["a", "https://photo.test/a.jpg"]]));
+    const plan = buildDayPlan([activity("a")], null, { a: "https://photo.test/a.jpg" });
     expect(plan[0]).toMatchObject({ legToNext: null, photoUrl: "https://photo.test/a.jpg" });
   });
 });

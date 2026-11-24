@@ -29,6 +29,23 @@ export function photoMatches(photoTitle: string, activity: Pick<Activity, "title
 export class ActivityPhotoService {
   constructor(private readonly photos: DestinationPhotoSource) {}
 
+  /**
+   * Photo URL of each activity that has a reliable one, by activity id. One
+   * lookup at a time, as Wikipedia's API etiquette asks: results are cached
+   * for weeks, so it's only slow the first time.
+   */
+  async photosFor(
+    activities: Pick<Activity, "id" | "title" | "location">[],
+    destination: string,
+  ): Promise<Record<string, string>> {
+    const photos: Record<string, string> = {};
+    for (const activity of activities) {
+      const photo = await this.photoFor(activity, destination);
+      if (photo) photos[activity.id] = photo.url;
+    }
+    return photos;
+  }
+
   async photoFor(
     activity: Pick<Activity, "title" | "location">,
     destination: string,

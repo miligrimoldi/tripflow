@@ -34,7 +34,7 @@ export function pickDay(trip: Pick<Trip, "startDate" | "endDate">, requested: un
 export function buildDayPlan(
   activities: Activity[],
   directions: Pick<DayDirections, "stopIds" | "legs" | "source"> | null,
-  photos: ReadonlyMap<string, string> = new Map(),
+  photos: Readonly<Record<string, string>> = {},
 ): PlanEntry[] {
   return activities.map((activity, i) => {
     const next = activities[i + 1];
@@ -49,7 +49,7 @@ export function buildDayPlan(
       startTime: activity.startTime,
       location: activity.location,
       coordinates: activity.coordinates,
-      photoUrl: photos.get(activity.id) ?? null,
+      photoUrl: photos[activity.id] ?? null,
       legToNext: leg ?? null,
       legByRoad: directions?.source === "roads",
     };
