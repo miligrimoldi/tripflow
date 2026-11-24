@@ -23,6 +23,16 @@ export function dateOnlyFromDate(date: Date): DateOnly {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * The calendar date at `now` in a time zone ("what day is it in Bariloche?").
+ * Without a zone, UTC. Near midnight it can differ from the server's date.
+ */
+export function todayIn(timeZone: string | null, now: Date = new Date()): DateOnly {
+  if (!timeZone) return dateOnlyFromDate(now);
+  // en-CA formats as YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
 /** Converts to the UTC-midnight `Date` expected by `@db.Date` columns. */
 export function dateOnlyToDate(value: DateOnly): Date {
   return new Date(`${value}T00:00:00.000Z`);

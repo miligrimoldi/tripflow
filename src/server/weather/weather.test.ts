@@ -29,17 +29,10 @@ describe("WeatherService", () => {
   };
   const source: WeatherSource = { forecast: async () => ({ timeZone: "America/Argentina/Salta", days: [day] }) };
 
-  it("returns the day's weather and the place's time zone", async () => {
-    expect(await new WeatherService(source).dayOutlook(point, "2026-07-11")).toEqual({
-      weather: day,
+  it("returns the forecast with the place's time zone", async () => {
+    expect(await new WeatherService(source).forecast(point)).toEqual({
       timeZone: "America/Argentina/Salta",
-    });
-  });
-
-  it("has no weather for days beyond the forecast, but still knows the time zone", async () => {
-    expect(await new WeatherService(source).dayOutlook(point, "2027-01-01")).toEqual({
-      weather: null,
-      timeZone: "America/Argentina/Salta",
+      days: [day],
     });
   });
 
@@ -49,10 +42,7 @@ describe("WeatherService", () => {
         throw new Error("down");
       },
     };
-    expect(await new WeatherService(source).dayOutlook(null, "2026-07-11")).toEqual({ weather: null, timeZone: null });
-    expect(await new WeatherService(failing).dayOutlook(point, "2026-07-11")).toEqual({
-      weather: null,
-      timeZone: null,
-    });
+    expect(await new WeatherService(source).forecast(null)).toBeNull();
+    expect(await new WeatherService(failing).forecast(point)).toBeNull();
   });
 });

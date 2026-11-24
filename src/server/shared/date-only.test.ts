@@ -7,6 +7,7 @@ import {
   eachDayInRange,
   isDateOnly,
   isWithinRange,
+  todayIn,
 } from "./date-only";
 
 describe("date-only", () => {
@@ -49,5 +50,13 @@ describe("date-only", () => {
     expect(isWithinRange("2026-01-01", "2026-01-01", "2026-01-05")).toBe(true);
     expect(isWithinRange("2026-01-05", "2026-01-01", "2026-01-05")).toBe(true);
     expect(isWithinRange("2026-01-06", "2026-01-01", "2026-01-05")).toBe(false);
+  });
+});
+
+describe("todayIn", () => {
+  it("is the date in the given time zone, which can differ from UTC near midnight", () => {
+    const lateNightInBariloche = new Date("2026-07-11T02:30:00Z"); // 23:30 of the 10th in Argentina
+    expect(todayIn("America/Argentina/Salta", lateNightInBariloche)).toBe("2026-07-10");
+    expect(todayIn(null, lateNightInBariloche)).toBe("2026-07-11");
   });
 });
