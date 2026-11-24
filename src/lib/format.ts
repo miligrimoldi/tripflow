@@ -44,3 +44,20 @@ export function initials(name: string): string {
     .map((part) => part[0]!.toUpperCase())
     .join("");
 }
+
+// Moments (comments, payments) are shown in the app's time zone and
+// formatted on the server, so server and client render the same text.
+// TripFlow is for Argentine travelers, like its es-AR copy.
+const shortDateTime = new Intl.DateTimeFormat("es-AR", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "America/Argentina/Buenos_Aires",
+});
+
+/** "24 nov, 09:14". */
+export function formatDateTimeShort(date: Date): string {
+  return shortDateTime.format(date);
+}

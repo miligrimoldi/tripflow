@@ -1,3 +1,4 @@
+import { formatDateTimeShort } from "@/lib/format";
 import type { Discussion } from "@/server/discussions/discussion";
 
 /** A discussion ready to cross to the client: plain data, dates already formatted. */
@@ -19,17 +20,6 @@ export type DiscussionViews = Record<string, DiscussionView>;
 
 export const NO_DISCUSSION: DiscussionView = { votes: { count: 0, votedByMe: false, voters: [] }, comments: [] };
 
-// Formatted on the server (so server and client render the same text) in the
-// app's time zone: TripFlow is for Argentine travelers, like its es-AR copy.
-const commentDate = new Intl.DateTimeFormat("es-AR", {
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-  timeZone: "America/Argentina/Buenos_Aires",
-});
-
 export function toDiscussionViews(discussions: ReadonlyMap<string, Discussion>): DiscussionViews {
   return Object.fromEntries(
     [...discussions].map(([activityId, { votes, comments }]) => [
@@ -41,7 +31,7 @@ export function toDiscussionViews(discussions: ReadonlyMap<string, Discussion>):
           authorName: comment.author.name,
           body: comment.body,
           createdAt: comment.createdAt.toISOString(),
-          createdAtLabel: commentDate.format(comment.createdAt),
+          createdAtLabel: formatDateTimeShort(comment.createdAt),
           canDelete: comment.canDelete,
         })),
       },
