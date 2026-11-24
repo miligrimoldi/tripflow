@@ -16,6 +16,7 @@ export function toTrip(row: TripRow): Trip {
     // The column is free text; anything unexpected falls back to the default.
     currency: isCurrency(row.currency) ? row.currency : "ARS",
     budgetCents: row.budgetCents === null ? null : Number(row.budgetCents),
+    coverImageUrl: row.coverImageUrl,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -74,6 +75,10 @@ export class PrismaTripRepository implements TripRepository {
       data: { currency, budgetCents: budgetCents === null ? null : BigInt(budgetCents) },
     });
     return toTrip(row);
+  }
+
+  async updateCover(id: string, coverImageUrl: string | null): Promise<Trip> {
+    return toTrip(await this.db.trip.update({ where: { id }, data: { coverImageUrl } }));
   }
 
   async delete(id: string): Promise<void> {

@@ -168,3 +168,4 @@ vite.config.ts.timestamp-*
 next-env.d.ts
 
 /src/generated/prisma
+/public/uploads

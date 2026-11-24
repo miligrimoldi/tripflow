@@ -16,6 +16,12 @@ const envSchema = z.object({
    * Without it, routes are optimized with straight-line distances.
    */
   ROUTING_URL: z.url().optional(),
+  /**
+   * Vercel Blob token, for trip cover uploads (created automatically when a
+   * Blob store is connected to the project). Without it, uploads go to
+   * `public/uploads` in development and are disabled in production.
+   */
+  BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
