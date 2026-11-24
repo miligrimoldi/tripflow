@@ -10,6 +10,8 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 - **Itinerario día por día**: cada día del viaje tiene sus actividades, con hora opcional.
 - **Drag & drop**: arrastrar actividades para reordenarlas o moverlas entre días e ideas, también con teclado
   (Espacio + flechas). Los cambios se ven al instante y, si no se pueden guardar, se revierten.
+- **Itinerario con fotos**: cada día abre con una foto de su lugar más representativo, su fecha, cuántas actividades
+  tiene y cuánto recorrido; las actividades muestran una miniatura del lugar cuando hay una foto confiable.
 - **Tablero de ideas**: actividades sin día asignado (restaurantes, excursiones, lugares…) que después se mueven a un día.
 - **Votos y comentarios**: cada integrante marca las ideas que le interesan y el grupo las comenta ("¿reservamos?",
   "cierra los lunes"). La idea que claramente lidera se destaca; al pasar a un día, la conversación se conserva.
@@ -172,6 +174,10 @@ src/
   un puerto `ExchangeRateSource` con dos adaptadores: DolarApi para todo lo que involucra pesos argentinos (con los
   distintos tipos de dólar, tarjeta primero porque es lo más común afuera) y Frankfurter (BCE) entre otras monedas. Si
   la fuente falla no hay error, solo no hay sugerencia. Las cotizaciones se escriben como en Argentina ("2.099,5").
+- **Fotos sin frenar la página.** La primera vez, buscar las fotos de todas las actividades y los recorridos de cada día
+  puede tardar unos segundos (las búsquedas en Wikipedia van de a una, como pide su API). Por eso el server component
+  pasa las promesas sin esperarlas: el itinerario aparece enseguida y las fotos se suman con un fundido cuando llegan
+  (`useResolved`, que a diferencia de `use()` no suspende). Después quedan cacheadas por semanas.
 - **Vista "Hoy".** El "ahora" se calcula en la zona horaria del destino, que viene con el pronóstico de Open-Meteo
   (gratis, sin API key): si el servidor corre en UTC o quien mira está en otro país, igual ve la hora de Bariloche. El
   cliente lee la hora con `useSyncExternalStore` (en el servidor es `null`), así no hay diferencias de hidratación y se
