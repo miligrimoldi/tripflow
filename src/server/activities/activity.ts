@@ -1,3 +1,4 @@
+import type { Coordinates } from "../shared/coordinates";
 import { isWithinRange, type DateOnly } from "../shared/date-only";
 import { tripDays, type Trip } from "../trips/trip";
 
@@ -20,6 +21,8 @@ export interface Activity {
   category: ActivityCategory;
   notes: string | null;
   location: string | null;
+  /** Where `location` is on the map, if it was picked from the place search. */
+  coordinates: Coordinates | null;
   url: string | null;
   /** `null` means the activity is an idea that is not scheduled yet. */
   date: DateOnly | null;
@@ -32,7 +35,7 @@ export interface Activity {
 
 export type ActivityDetails = Pick<
   Activity,
-  "title" | "category" | "notes" | "location" | "url" | "date" | "startTime"
+  "title" | "category" | "notes" | "location" | "coordinates" | "url" | "date" | "startTime"
 >;
 
 export type NewActivity = ActivityDetails & {
@@ -77,6 +80,13 @@ export function buildItinerary(trip: Pick<Trip, "startDate" | "endDate">, activi
     })),
     ideas: ideas.sort(byPosition),
   };
+}
+
+/** Every known point of the itinerary (activities whose location is on the map). */
+export function itineraryPoints(itinerary: Itinerary): Coordinates[] {
+  return [...itinerary.days.flatMap((day) => day.activities), ...itinerary.ideas].flatMap((activity) =>
+    activity.coordinates ? [activity.coordinates] : [],
+  );
 }
 
 export function isDateInTrip(date: DateOnly, trip: Pick<Trip, "startDate" | "endDate">): boolean {
