@@ -25,6 +25,10 @@ describe("parseWikipediaPhoto", () => {
     expect(parseWikipediaPhoto({ batchcomplete: true })).toBeNull();
   });
 
+  it("throws on API errors instead of reading them as 'no results' (which would be cached)", () => {
+    expect(() => parseWikipediaPhoto({ error: { code: "ratelimited", info: "Too many requests" } })).toThrow();
+  });
+
   it("rejects unexpected responses", () => {
     expect(() => parseWikipediaPhoto({ query: { pages: "nope" } })).toThrow();
   });

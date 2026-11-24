@@ -26,6 +26,11 @@ const searchSchema = z.object({
  * maps, which make a poor cover.
  */
 export function parseWikipediaPhoto(json: unknown): DestinationPhoto | null {
+  // API errors (rate limits, maintenance) come with HTTP 200 and an "error"
+  // object. They must throw: read as "no results", they would be cached.
+  if (typeof json === "object" && json !== null && "error" in json) {
+    throw new Error(`Wikipedia API error: ${JSON.stringify((json as { error: unknown }).error)}`);
+  }
   const parsed = searchSchema.safeParse(json);
   if (!parsed.success) throw new Error("Unexpected Wikipedia response");
 
