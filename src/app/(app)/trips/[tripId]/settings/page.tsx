@@ -1,4 +1,4 @@
-import { Pencil, TriangleExclamationPoint, UserPlus, Users } from "lucide-react";
+import { ImageIcon, Pencil, TriangleExclamationPoint, UserPlus, Users } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Card, CardHeading, Skeleton } from "@/components/ui/card";
@@ -7,12 +7,13 @@ import { leaveTripAction } from "@/features/members/actions";
 import { InviteLinkPanel } from "@/features/members/components/invite-link-panel";
 import { MemberList } from "@/features/members/components/member-list";
 import { deleteTripAction, updateTripAction } from "@/features/trips/actions";
+import { CoverSettings } from "@/features/trips/components/cover-settings";
 import { TripForm } from "@/features/trips/components/trip-form";
 import { TripHeader } from "@/features/trips/components/trip-header";
 import { tripMetadata } from "@/features/trips/metadata";
 import { orNotFound } from "@/lib/page-data";
 import { requireUser } from "@/server/auth/session";
-import { membershipService, tripService } from "@/server/container";
+import { coverService, membershipService, tripService } from "@/server/container";
 import { absoluteUrl } from "@/server/env";
 import { hasPermission } from "@/server/members/member";
 
@@ -38,7 +39,11 @@ async function TripSettings({ params }: Pick<PageProps<"/trips/[tripId]/settings
   );
 
   const canInvite = hasPermission(role, "member:invite");
-  const invitation = canInvite ? await membershipService.getActiveInvitation(user.id, tripId) : null;
+  const canEdit = hasPermission(role, "trip:edit");
+  const [invitation, cover] = await Promise.all([
+    canInvite ? membershipService.getActiveInvitation(user.id, tripId) : null,
+    canEdit ? coverService.coverFor(trip) : null,
+  ]);
 
   return (
     <div className="space-y-8">
@@ -74,7 +79,19 @@ async function TripSettings({ params }: Pick<PageProps<"/trips/[tripId]/settings
         </div>
 
         <div className="space-y-6">
-          {hasPermission(role, "trip:edit") && (
+          {canEdit && (
+            <Card className="p-6">
+              <CardHeading
+                icon={ImageIcon}
+                tone="sky"
+                title="Foto de portada"
+                description="Aparece en el encabezado del viaje y en Mis viajes."
+              />
+              <CoverSettings tripId={trip.id} cover={cover} uploadsEnabled={coverService.uploadsEnabled} />
+            </Card>
+          )}
+
+          {canEdit && (
             <Card className="p-6">
               <CardHeading
                 icon={Pencil}

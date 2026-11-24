@@ -5,7 +5,8 @@ import { cn } from "@/lib/cn";
 import { formatDateRange } from "@/lib/format";
 import type { TripMember } from "@/server/members/member";
 import { tripLength, type Trip } from "@/server/trips/trip";
-import { coverTexture, tripCover, TripTimingChip } from "../trip-visuals";
+import { TripTimingChip } from "../trip-visuals";
+import { TripCoverImage } from "./trip-cover-image";
 
 type Tab = "itinerary" | "map" | "budget" | "settings";
 
@@ -34,9 +35,9 @@ export function TripHeader({ trip, members, active }: TripHeaderProps) {
         Mis viajes
       </Link>
 
-      <div className={cn("relative overflow-hidden rounded-3xl bg-linear-to-br shadow-lift", tripCover(trip.id))}>
-        <div aria-hidden className={cn("absolute inset-0", coverTexture)} />
-        <div className="relative flex flex-wrap items-end justify-between gap-6 p-6 sm:p-8">
+      <div className="relative flex min-h-60 overflow-hidden rounded-3xl bg-slate-800 shadow-lift sm:min-h-72">
+        <TripCoverImage trip={trip} overlay="bottom" sizes="(min-width: 1280px) 1216px, 100vw" priority showCredit />
+        <div className="relative flex w-full flex-wrap items-end justify-between gap-6 self-end p-6 sm:p-8">
           <div className="min-w-0 space-y-3 text-white">
             <TripTimingChip trip={trip} />
             <h1 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">{trip.name}</h1>
