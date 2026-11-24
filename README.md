@@ -15,6 +15,9 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 - **Buscador de lugares**: al cargar la ubicación se sugieren lugares reales, priorizando los cercanos al viaje.
 - **Mapa del viaje**: todas las actividades ubicadas, con marcadores numerados y coloreados por día, filtro por día y el
   recorrido de cada día en orden, para detectar días que conviene reordenar.
+- **Optimización de recorridos**: para cada día, sugiere el orden que minimiza el recorrido total ("de 89,9 km a
+  25,7 km, 71 % menos"). Las actividades con horario quedan fijas y el resto se reordena entre ellas; el usuario ve la
+  propuesta y decide si aplicarla.
 - **Presupuesto compartido**: gastos estimados por categoría (alojamiento, transporte, comidas…), opcionalmente
   vinculados a una actividad, con un presupuesto total, cuánto queda, desglose por categoría y cuánto toca por persona.
   El costo de cada actividad se ve en el itinerario.
@@ -139,6 +142,17 @@ src/
   los links de las actividades solo aceptan `http(s)` y los tokens de invitación son aleatorios (192 bits).
 - **Formularios con mejora progresiva.** Server Actions + `useActionState`. Tras un error, el formulario conserva lo que
   se escribió (excepto contraseñas).
+- **Optimización de recorridos (Smart Itinerary).** Es un problema del viajante (TSP) de camino abierto con
+  restricciones de precedencia, NP-hard en general, pero un día de viaje es chico:
+  - Hasta 12 paradas: solución **exacta** con programación dinámica de Held–Karp, O(n²·2ⁿ), que admite precedencias de
+    forma natural (una parada solo se agrega si sus predecesoras ya están en el recorrido).
+  - Más paradas: vecino más cercano desde cada inicio posible + mejora local 2-opt.
+  - Los horarios se traducen en precedencias: las actividades con hora mantienen el orden cronológico y funcionan como
+    anclas (lo que está entre el desayuno y la cena no se mueve antes del desayuno).
+  - Los tests comparan el resultado contra fuerza bruta en cientos de casos aleatorios.
+  - Las distancias vienen de un puerto `TravelCostProvider`: por defecto, distancia en línea recta (haversine),
+    instantánea y sin servicios externos; con `ROUTING_URL` usa tiempos reales en auto de OSRM y, si falla, vuelve a la
+    línea recta. Al aplicar un recorrido, el servidor verifica que el día no haya cambiado mientras tanto.
 - **Búsqueda de lugares por un endpoint propio** (`/api/places`), solo para usuarios logueados, con resultados
   cacheados (`"use cache"`) para no abusar de la API pública de Photon mientras se escribe. Las búsquedas se envían a
   Photon (komoot); la URL es configurable con `PHOTON_URL` para usar una instancia propia.
@@ -156,6 +170,8 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Invitaciones: unirse, idempotencia, vencimiento, invalidar el link anterior, quitar integrantes y abandonar el viaje.
 - Presupuesto: parseo de montos en distintos formatos, resumen contra el presupuesto (ok / cerca del límite /
   excedido), desglose por categoría, división por persona sin perder centavos y permisos.
+- Recorridos: optimizador vs. fuerza bruta (con y sin horarios), heurística para días largos, anclas por horario,
+  actividades sin ubicación fijas, respuesta de OSRM y fallback, y que no se aplique una sugerencia desactualizada.
 - Lugares y mapa: coordenadas válidas (ambas o ninguna, rangos), parseo de respuestas de Photon, sesgo por zona del
   viaje y armado de las capas del mapa por día.
 
@@ -166,4 +182,4 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Login con Google, verificación de email y recuperación de contraseña.
 - Gastos divididos: quién pagó cada gasto y quién le debe a quién, con la menor cantidad de transferencias.
 - Votos o comentarios en las ideas.
-- Mapa: rutas reales por calle (en vez de líneas rectas) y sugerir el orden más corto para cada día.
+- Mapa: dibujar el recorrido real por calle (en vez de líneas rectas) y sumar tiempos estimados entre paradas.
