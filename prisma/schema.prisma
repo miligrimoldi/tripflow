@@ -25,12 +25,17 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-  memberships        TripMember[]
-  createdActivities  Activity[]
-  createdInvitations TripInvitation[]
-  createdExpenses    Expense[]
-  activityVotes      ActivityVote[]
-  activityComments   ActivityComment[]
+  memberships         TripMember[]
+  createdActivities   Activity[]
+  createdInvitations  TripInvitation[]
+  createdExpenses     Expense[]            @relation("ExpenseCreatedBy")
+  paidExpenses        Expense[]            @relation("ExpensePaidBy")
+  expenseShares       ExpenseParticipant[]
+  settlementsSent     Settlement[]         @relation("SettlementFrom")
+  settlementsReceived Settlement[]         @relation("SettlementTo")
+  createdSettlements  Settlement[]         @relation("SettlementCreatedBy")
+  activityVotes       ActivityVote[]
+  activityComments    ActivityComment[]
 
   @@map("user")
 }
@@ -107,6 +112,7 @@ model Trip {
   activities  Activity[]
   invitations TripInvitation[]
   expenses    Expense[]
+  settlements Settlement[]
 
   @@map("trip")
 }
@@ -209,13 +215,18 @@ model Expense {
   amountCents BigInt
   /// If the activity is deleted the cost is kept, unlinked, so no money silently disappears.
   activityId  String?
+  /// Who paid it. Null while it's only an estimate (it doesn't create debts yet).
+  paidById    String?
   createdById String
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  activity  Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
-  createdBy User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  trip         Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  activity     Activity?            @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  createdBy    User                 @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  paidBy       User?                @relation("ExpensePaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  /// Who it's split among, in equal parts.
+  participants ExpenseParticipant[]
 
   @@index([tripId])
   @@index([activityId])
@@ -249,4 +260,37 @@ model ActivityComment {
 
   @@index([activityId, createdAt])
   @@map("activity_comment")
+}
+
+/// A member included in an expense: the cost is split evenly among them.
+model ExpenseParticipant {
+  expenseId String
+  userId    String
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([expenseId, userId])
+  @@index([userId])
+  @@map("expense_participant")
+}
+
+/// Money one member gave another to settle up ("Bruno le pagó $15.000 a Ana").
+model Settlement {
+  id          String   @id @default(cuid())
+  tripId      String
+  fromId      String
+  toId        String
+  /// Hundredths of the trip's currency, like expenses.
+  amountCents BigInt
+  createdById String
+  createdAt   DateTime @default(now())
+
+  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  from      User @relation("SettlementFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to        User @relation("SettlementTo", fields: [toId], references: [id], onDelete: Cascade)
+  createdBy User @relation("SettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([tripId, createdAt])
+  @@map("settlement")
 }

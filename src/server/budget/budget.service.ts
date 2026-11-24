@@ -5,7 +5,7 @@ import { NotFoundError, ValidationError } from "../shared/errors";
 import { parseInput } from "../shared/validation";
 import type { Trip } from "../trips/trip";
 import type { TripRepository } from "../trips/trip.repository";
-import { costsByActivity, summarizeBudget, type BudgetSummary, type Expense } from "./expense";
+import { costsByActivity, summarizeBudget, type BudgetSummary, type Expense, type ExpenseDetails } from "./expense";
 import type { ExpenseRepository } from "./expense.repository";
 import { budgetSettingsSchema, expenseSchema, type BudgetSettingsInput, type ExpenseInput } from "./expense.schemas";
 
@@ -51,6 +51,7 @@ export class BudgetService {
     await this.access.require(tripId, userId, "expense:manage");
     const details = parseInput(expenseSchema, input);
     await this.assertActivityInTrip(details.activityId, tripId);
+    await this.assertMembers(details, tripId);
     return this.expenses.create({ ...details, tripId, createdById: userId });
   }
 
@@ -58,6 +59,7 @@ export class BudgetService {
     const current = await this.loadManageable(userId, expenseId);
     const details = parseInput(expenseSchema, input);
     await this.assertActivityInTrip(details.activityId, current.tripId);
+    await this.assertMembers(details, current.tripId);
     return this.expenses.update(expenseId, details);
   }
 
@@ -84,6 +86,22 @@ export class BudgetService {
     const trip = await this.trips.findById(tripId);
     if (!trip) throw new NotFoundError("Viaje");
     return trip;
+  }
+
+  /** Who paid and who shares the cost must be in the trip. */
+  private async assertMembers(
+    { paidById, participantIds }: Pick<ExpenseDetails, "paidById" | "participantIds">,
+    tripId: string,
+  ): Promise<void> {
+    const members = new Set((await this.members.listByTrip(tripId)).map((member) => member.userId));
+    if (paidById !== null && !members.has(paidById)) {
+      throw new ValidationError("Revisá quién pagó", { paidById: ["Elegí a alguien del viaje"] });
+    }
+    if (participantIds.some((id) => !members.has(id))) {
+      throw new ValidationError("Revisá entre quiénes se divide", {
+        participantIds: ["Elegí personas del viaje"],
+      });
+    }
   }
 
   /** Expenses can only be linked to activities of the same trip. */

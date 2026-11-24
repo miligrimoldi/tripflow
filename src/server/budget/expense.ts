@@ -3,6 +3,11 @@ import { splitEvenly } from "../shared/money";
 export const EXPENSE_CATEGORIES = ["ACCOMMODATION", "TRANSPORT", "FOOD", "ACTIVITIES", "SHOPPING", "OTHER"] as const;
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
+export interface Person {
+  id: string;
+  name: string;
+}
+
 export interface Expense {
   id: string;
   tripId: string;
@@ -12,7 +17,11 @@ export interface Expense {
   amountCents: number;
   /** The activity this cost belongs to, if any (e.g. a museum ticket). */
   activity: { id: string; title: string } | null;
-  createdBy: { id: string; name: string };
+  /** Who paid it. `null` while it's only an estimate: it doesn't create debts yet. */
+  paidBy: Person | null;
+  /** Who it's split among, in equal parts. */
+  participants: Person[];
+  createdBy: Person;
   createdAt: Date;
 }
 
@@ -21,6 +30,8 @@ export interface ExpenseDetails {
   category: ExpenseCategory;
   amountCents: number;
   activityId: string | null;
+  paidById: string | null;
+  participantIds: string[];
 }
 
 export type NewExpense = ExpenseDetails & { tripId: string; createdById: string };

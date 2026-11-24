@@ -16,6 +16,9 @@ import type { Comment, NewComment, Vote } from "../discussions/discussion";
 import type { DiscussionRepository } from "../discussions/discussion.repository";
 import { DiscussionService } from "../discussions/discussion.service";
 import type { ExpenseRepository } from "../budget/expense.repository";
+import { SettleUpService } from "../budget/settle-up.service";
+import type { NewSettlement, Settlement } from "../budget/settlement";
+import type { SettlementRepository } from "../budget/settlement.repository";
 import type { Invitation, NewInvitation } from "../members/invitation";
 import type { InvitationRepository } from "../members/invitation.repository";
 import type { MemberRole, TripMember } from "../members/member";
@@ -46,6 +49,7 @@ class FakeDb {
   activities = new Map<string, Activity>();
   invitations: Invitation[] = [];
   expenses = new Map<string, Expense>();
+  settlements = new Map<string, Settlement>();
   votes: { activityId: string; userId: string }[] = [];
   comments = new Map<string, Comment>();
   private sequence = 0;
@@ -269,9 +273,15 @@ class InMemoryExpenseRepository implements ExpenseRepository {
     this.db.expenses.delete(id);
   }
 
-  private toFields({ activityId, ...details }: ExpenseDetails) {
+  private toFields({ activityId, paidById, participantIds, ...details }: ExpenseDetails) {
     const activity = activityId ? this.db.activities.get(activityId) : undefined;
-    return { ...details, activity: activity ? { id: activity.id, title: activity.title } : null };
+    const person = (id: string) => ({ id, name: this.db.users.get(id)?.name ?? "?" });
+    return {
+      ...details,
+      activity: activity ? { id: activity.id, title: activity.title } : null,
+      paidBy: paidById ? person(paidById) : null,
+      participants: participantIds.map(person).sort((a, b) => a.name.localeCompare(b.name)),
+    };
   }
 }
 
@@ -325,6 +335,37 @@ export class SequentialTokens implements TokenGenerator {
 }
 
 /** Builds every service wired to in-memory infrastructure. */
+class InMemorySettlementRepository implements SettlementRepository {
+  constructor(private readonly db: FakeDb) {}
+
+  async findById(id: string) {
+    return this.db.settlements.get(id) ?? null;
+  }
+
+  async listByTrip(tripId: string) {
+    return [...this.db.settlements.values()].filter((s) => s.tripId === tripId).reverse();
+  }
+
+  async create({ tripId, fromId, toId, amountCents, createdById }: NewSettlement) {
+    const person = (id: string) => ({ id, name: this.db.users.get(id)?.name ?? "?" });
+    const settlement: Settlement = {
+      id: this.db.nextId("settlement"),
+      tripId,
+      from: person(fromId),
+      to: person(toId),
+      amountCents,
+      createdBy: person(createdById),
+      createdAt: new Date(),
+    };
+    this.db.settlements.set(settlement.id, settlement);
+    return settlement;
+  }
+
+  async delete(id: string) {
+    this.db.settlements.delete(id);
+  }
+}
+
 class InMemoryDiscussionRepository implements DiscussionRepository {
   constructor(private readonly db: FakeDb) {}
 
@@ -386,6 +427,7 @@ export function createTestApp() {
   const activities = new InMemoryActivityRepository(db);
   const expenses = new InMemoryExpenseRepository(db);
   const discussions = new InMemoryDiscussionRepository(db);
+  const settlements = new InMemorySettlementRepository(db);
   const access = new TripAccessPolicy(members);
   const clock = new FakeClock();
   const storage = new FakeImageStorage();
@@ -395,7 +437,7 @@ export function createTestApp() {
   return {
     db,
     clock,
-    repositories: { trips, members, invitations, activities, expenses, discussions },
+    repositories: { trips, members, invitations, activities, expenses, discussions, settlements },
     storage,
     destinationPhotos,
     coverService,
@@ -403,6 +445,7 @@ export function createTestApp() {
     activityService: new ActivityService(activities, trips, access),
     discussionService: new DiscussionService(discussions, activities, access),
     budgetService: new BudgetService(expenses, trips, activities, members, access),
+    settleUpService: new SettleUpService(expenses, settlements, members, access),
     routeService: new RouteService(activities, trips, new StraightLineTravelCost(), access),
     directionsService: new DirectionsService(activities, trips, new StraightLineDirections(), access),
     membershipService: new MembershipService(members, invitations, trips, access, new SequentialTokens(), clock),

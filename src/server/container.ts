@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { ActivityService } from "./activities/activity.service";
 import { BudgetService } from "./budget/budget.service";
+import { SettleUpService } from "./budget/settle-up.service";
 import { CoverService } from "./covers/cover.service";
 import type { ImageStorage } from "./covers/ports";
 import { DiscussionService } from "./discussions/discussion.service";
@@ -15,6 +16,7 @@ import { OsrmTravelCost } from "./infrastructure/routing/osrm-travel-cost";
 import { prisma } from "./infrastructure/prisma/client";
 import { PrismaDiscussionRepository } from "./infrastructure/prisma/prisma-discussion.repository";
 import { PrismaActivityRepository } from "./infrastructure/prisma/prisma-activity.repository";
+import { PrismaSettlementRepository } from "./infrastructure/prisma/prisma-settlement.repository";
 import { PrismaExpenseRepository } from "./infrastructure/prisma/prisma-expense.repository";
 import { PrismaInvitationRepository } from "./infrastructure/prisma/prisma-invitation.repository";
 import { PrismaMembershipRepository } from "./infrastructure/prisma/prisma-membership.repository";
@@ -85,6 +87,13 @@ export const budgetService = new BudgetService(
 export const discussionService = new DiscussionService(
   new PrismaDiscussionRepository(prisma),
   activityRepository,
+  tripAccess,
+);
+
+export const settleUpService = new SettleUpService(
+  expenseRepository,
+  new PrismaSettlementRepository(prisma),
+  membershipRepository,
   tripAccess,
 );
 

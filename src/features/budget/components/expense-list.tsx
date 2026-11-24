@@ -45,8 +45,20 @@ export function ExpenseList({ tripId, expenses, currency, canManage }: ExpenseLi
                     </span>
                   </>
                 )}
-                <span aria-hidden>·</span>
-                por {expense.createdBy.name}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {expense.paidBy ? (
+                  <>
+                    Pagó <span className="font-medium text-slate-700">{expense.paidBy.name}</span>
+                    {" · "}
+                    {splitLabel(expense.participants)}
+                  </>
+                ) : (
+                  <>
+                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-medium text-slate-600">Estimado</span>{" "}
+                    {splitLabel(expense.participants)}
+                  </>
+                )}
               </p>
             </div>
             <p className="font-display text-lg font-semibold text-slate-900 tabular-nums">
@@ -77,4 +89,11 @@ export function ExpenseList({ tripId, expenses, currency, canManage }: ExpenseLi
       })}
     </ul>
   );
+}
+
+/** "entre todos (3)", "solo Bruno", "entre Ana y Carla". */
+function splitLabel(participants: Expense["participants"]): string {
+  if (participants.length === 1) return `solo ${participants[0].name}`;
+  if (participants.length === 2) return `entre ${participants[0].name} y ${participants[1].name}`;
+  return `entre ${participants.length}`;
 }

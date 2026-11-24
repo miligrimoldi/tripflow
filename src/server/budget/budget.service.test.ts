@@ -24,7 +24,13 @@ describe("BudgetService", () => {
   });
 
   const add = (userId: string, input: Record<string, unknown>) =>
-    app.budgetService.addExpense(userId, tripId, { description: "Gasto", category: "OTHER", amount: "1000", ...input });
+    app.budgetService.addExpense(userId, tripId, {
+      description: "Gasto",
+      category: "OTHER",
+      amount: "1000",
+      participantIds: [ana.id, bruno.id],
+      ...input,
+    });
 
   describe("expenses", () => {
     it("parses amounts typed in Argentine format into cents", async () => {
@@ -71,16 +77,43 @@ describe("BudgetService", () => {
       expect(await app.budgetService.getExpense(ana.id, expense.id)).toMatchObject({ activity: null });
     });
 
+    it("records who paid and who shares the cost", async () => {
+      const expense = await add(ana.id, { paidById: ana.id, participantIds: [bruno.id, ana.id, ana.id] });
+      expect(expense.paidBy).toEqual({ id: ana.id, name: "Ana" });
+      expect(expense.participants.map((p) => p.name)).toEqual(["Ana", "Bruno"]);
+
+      // Nobody has paid an estimate yet.
+      expect((await add(ana.id, { paidById: "" })).paidBy).toBeNull();
+    });
+
+    it("only splits among trip members, and needs at least one", async () => {
+      await expect(add(ana.id, { participantIds: [] })).rejects.toMatchObject({
+        fieldErrors: { participantIds: expect.any(Array) },
+      });
+      await expect(add(ana.id, { participantIds: [ana.id, outsider.id] })).rejects.toMatchObject({
+        fieldErrors: { participantIds: expect.any(Array) },
+      });
+      await expect(add(ana.id, { paidById: outsider.id })).rejects.toMatchObject({
+        fieldErrors: { paidById: expect.any(Array) },
+      });
+      // A single checked box arrives as a plain string.
+      expect((await add(ana.id, { participantIds: bruno.id })).participants).toEqual([{ id: bruno.id, name: "Bruno" }]);
+    });
+
     it("updates and deletes costs", async () => {
       const expense = await add(ana.id, { amount: "1000" });
       await app.budgetService.updateExpense(bruno.id, expense.id, {
         description: "Nafta",
         category: "TRANSPORT",
         amount: "1500",
+        paidById: bruno.id,
+        participantIds: [bruno.id],
       });
       expect(await app.budgetService.getExpense(ana.id, expense.id)).toMatchObject({
         description: "Nafta",
         amountCents: 150_000,
+        paidBy: { name: "Bruno" },
+        participants: [{ name: "Bruno" }],
       });
 
       await app.budgetService.deleteExpense(ana.id, expense.id);
