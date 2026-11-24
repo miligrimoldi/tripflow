@@ -5,7 +5,7 @@ import { ConfirmAction } from "@/components/ui/confirm-action";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconTile } from "@/components/ui/icon-tile";
 import type { Expense } from "@/server/budget/expense";
-import { formatMoney, type Currency } from "@/server/shared/money";
+import { formatMoney, formatRate, type Currency } from "@/server/shared/money";
 import { deleteExpenseAction } from "../actions";
 import { EXPENSE_CATEGORY_META } from "../categories";
 
@@ -61,9 +61,20 @@ export function ExpenseList({ tripId, expenses, currency, canManage }: ExpenseLi
                 )}
               </p>
             </div>
-            <p className="font-display text-lg font-semibold text-slate-900 tabular-nums">
-              {formatMoney(expense.amountCents, currency)}
-            </p>
+            <div className="text-right">
+              <p className="font-display text-lg font-semibold text-slate-900 tabular-nums">
+                {formatMoney(expense.amountCents, currency)}
+              </p>
+              {expense.original && (
+                <p
+                  className="text-xs text-slate-500 tabular-nums"
+                  title={`Cotización: 1 ${expense.original.currency} = ${formatRate(expense.original.rate)} ${currency}`}
+                >
+                  {formatMoney(expense.original.amountCents, expense.original.currency)} · a{" "}
+                  {formatRate(expense.original.rate)}
+                </p>
+              )}
+            </div>
             {canManage && (
               <div className="flex items-center gap-1">
                 <Link

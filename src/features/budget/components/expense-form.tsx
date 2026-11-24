@@ -8,7 +8,9 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { fieldError, idleState, submittedValue, type ActionState } from "@/lib/action-state";
 import { useFormKey } from "@/lib/use-form-key";
 import { EXPENSE_CATEGORIES } from "@/server/budget/expense";
+import type { Currency } from "@/server/shared/money";
 import { EXPENSE_CATEGORY_META } from "../categories";
+import { AmountField } from "./amount-field";
 
 export interface ActivityOption {
   value: string;
@@ -18,8 +20,12 @@ export interface ActivityOption {
 export interface ExpenseFormValues {
   description: string;
   category: string;
-  /** As typed in the input, e.g. "15000" or "1234,50". */
+  /** As typed in the input, e.g. "15000" or "1234,50", in `currency`. */
   amount: string;
+  /** Currency it was paid in ("" = the trip's). */
+  currency: string;
+  /** 1 unit of `currency` in the trip's currency, as typed ("2.099,5"). */
+  rate: string;
   activityId: string;
   /** "" while nobody has paid it (an estimate). */
   paidById: string;
@@ -33,7 +39,8 @@ export interface MemberOption {
 
 interface ExpenseFormProps {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
-  currency: string;
+  /** The trip's currency: totals and debts are kept in it. */
+  currency: Currency;
   activityOptions: ActivityOption[];
   /** Trip members, for "who paid" and "split among". */
   members: MemberOption[];
@@ -70,32 +77,28 @@ export function ExpenseForm({ action, currency, activityOptions, members, initia
           />
         )}
       </Field>
-      <div className="grid gap-4 @md:grid-cols-2">
-        <Field label={`Monto (${currency})`} error={fieldError(state, "amount")} hint="Ej.: 15.000 o 1.234,50">
-          {(props) => (
-            <Input
-              {...props}
-              name="amount"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="0"
-              defaultValue={value("amount")}
-              required
-            />
-          )}
-        </Field>
-        <Field label="Categoría" error={fieldError(state, "category")}>
-          {(props) => (
-            <Select {...props} name="category" defaultValue={value("category") || "ACCOMMODATION"}>
-              {EXPENSE_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {EXPENSE_CATEGORY_META[category].label}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-      </div>
+      <AmountField
+        // Starts over if the trip's currency changes (its state defaults to it).
+        key={currency}
+        tripCurrency={currency}
+        initial={{ amount: value("amount"), currency: value("currency"), rate: value("rate") }}
+        errors={{
+          amount: fieldError(state, "amount"),
+          currency: fieldError(state, "currency"),
+          rate: fieldError(state, "rate"),
+        }}
+      />
+      <Field label="Categoría" error={fieldError(state, "category")}>
+        {(props) => (
+          <Select {...props} name="category" defaultValue={value("category") || "ACCOMMODATION"}>
+            {EXPENSE_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {EXPENSE_CATEGORY_META[category].label}
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
       {activityOptions.length > 0 && (
         <Field
           label="Actividad (opcional)"

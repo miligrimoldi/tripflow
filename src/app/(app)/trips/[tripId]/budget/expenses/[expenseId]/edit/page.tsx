@@ -10,7 +10,7 @@ import { orNotFound } from "@/lib/page-data";
 import { requireUser } from "@/server/auth/session";
 import { activityService, budgetService, membershipService, tripService } from "@/server/container";
 import { hasPermission } from "@/server/members/member";
-import { centsToInput } from "@/server/shared/money";
+import { centsToInput, formatRate } from "@/server/shared/money";
 
 export const metadata: Metadata = { title: "Editar gasto" };
 
@@ -54,7 +54,10 @@ async function EditExpense({ params }: Pick<Props, "params">) {
           initial={{
             description: expense.description,
             category: expense.category,
-            amount: centsToInput(expense.amountCents),
+            // What was actually paid: the original currency and rate, if any.
+            amount: centsToInput(expense.original?.amountCents ?? expense.amountCents),
+            currency: expense.original?.currency ?? trip.currency,
+            rate: expense.original ? formatRate(expense.original.rate) : "",
             activityId: expense.activity?.id ?? "",
             paidById: expense.paidBy?.id ?? "",
             participantIds: expense.participants.map((participant) => participant.id),
