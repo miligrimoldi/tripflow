@@ -34,7 +34,7 @@ export function ExpenseForm({ action, currency, activityOptions, initial, submit
   const value = (field: keyof ExpenseFormValues) => submittedValue(state, field) ?? initial?.[field] ?? "";
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form action={formAction} className="@container space-y-4" noValidate>
       <FormAlert state={state} />
       <Field label="¿En qué?" error={fieldError(state, "description")}>
         {(props) => (
@@ -47,7 +47,7 @@ export function ExpenseForm({ action, currency, activityOptions, initial, submit
           />
         )}
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 @md:grid-cols-2">
         <Field label={`Monto estimado (${currency})`} error={fieldError(state, "amount")} hint="Ej.: 15.000 o 1.234,50">
           {(props) => (
             <Input
@@ -66,7 +66,7 @@ export function ExpenseForm({ action, currency, activityOptions, initial, submit
             <Select {...props} name="category" defaultValue={value("category") || "ACCOMMODATION"}>
               {EXPENSE_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
-                  {EXPENSE_CATEGORY_META[category].icon} {EXPENSE_CATEGORY_META[category].label}
+                  {EXPENSE_CATEGORY_META[category].label}
                 </option>
               ))}
             </Select>

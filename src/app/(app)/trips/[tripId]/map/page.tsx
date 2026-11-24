@@ -1,7 +1,9 @@
+import { Map as MapIcon, MapPinOff, MapPinPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Card, Skeleton } from "@/components/ui/card";
+import { Card, CardHeading, Skeleton } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { TripMap } from "@/features/map/components/trip-map";
 import { buildMapData } from "@/features/map/map-data";
 import { TripHeader } from "@/features/trips/components/trip-header";
@@ -47,28 +49,27 @@ async function TripMapView({ params, searchParams }: Props) {
       {groups.length > 0 ? (
         <TripMap groups={groups} focusId={typeof focus === "string" ? focus : undefined} />
       ) : (
-        <div className="rounded-2xl border-2 border-dashed border-slate-300 px-6 py-16 text-center">
-          <span className="text-5xl" aria-hidden>
-            🗺️
-          </span>
-          <h2 className="mt-4 text-lg font-semibold text-slate-900">Todavía no hay lugares en el mapa</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-slate-600">
-            Cuando agregues una actividad, buscá su ubicación y elegila de la lista para verla acá.
-          </p>
-        </div>
+        <EmptyState icon={MapIcon} tone="sky" title="Todavía no hay lugares en el mapa">
+          Cuando agregues una actividad, buscá su ubicación y elegila de la lista para verla acá.
+        </EmptyState>
       )}
 
       {unlocated.length > 0 && (
-        <Card className="p-5">
-          <h2 className="font-semibold text-slate-900">Sin ubicación en el mapa ({unlocated.length})</h2>
-          <p className="mb-3 text-xs text-slate-500">
-            {canManage
-              ? "Editalas y elegí la ubicación de la lista para que aparezcan."
-              : "Todavía no tienen ubicación."}
-          </p>
+        <Card className="p-6">
+          <CardHeading
+            icon={MapPinOff}
+            tone="slate"
+            title={`Sin ubicación en el mapa (${unlocated.length})`}
+            description={
+              canManage
+                ? "Editalas y elegí la ubicación de la lista para que aparezcan."
+                : "Todavía no tienen ubicación."
+            }
+            className="mb-3"
+          />
           <ul className="divide-y divide-slate-100">
             {unlocated.map((activity) => (
-              <li key={activity.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+              <li key={activity.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                 <span className="min-w-0 truncate text-slate-700">
                   {activity.title}
                   {activity.location && <span className="text-slate-400"> · {activity.location}</span>}
@@ -76,8 +77,9 @@ async function TripMapView({ params, searchParams }: Props) {
                 {canManage && (
                   <Link
                     href={`/trips/${trip.id}/activities/${activity.id}/edit`}
-                    className="shrink-0 font-medium text-brand-700 hover:underline"
+                    className="inline-flex shrink-0 items-center gap-1 font-medium text-brand-700 hover:underline"
                   >
+                    <MapPinPlus className="size-4" aria-hidden />
                     Agregar ubicación
                   </Link>
                 )}

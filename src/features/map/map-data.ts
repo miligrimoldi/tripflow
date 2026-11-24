@@ -9,7 +9,8 @@ export const IDEAS_COLOR = "#64748b";
 export interface MapPoint {
   id: string;
   title: string;
-  icon: string;
+  /** Category name, shown in the popup ("Comida", "Excursión"…). */
+  categoryLabel: string;
   location: string;
   coordinates: Coordinates;
   startTime: string | null;
@@ -38,7 +39,7 @@ function toPoint(activity: Activity & { coordinates: Coordinates }, order: numbe
   return {
     id: activity.id,
     title: activity.title,
-    icon: CATEGORY_META[activity.category].icon,
+    categoryLabel: CATEGORY_META[activity.category].label,
     location: activity.location ?? "",
     coordinates: activity.coordinates,
     startTime: activity.startTime,

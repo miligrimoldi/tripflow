@@ -18,7 +18,7 @@ export function TripForm({ action, initial, submitLabel }: TripFormProps) {
   const value = (field: keyof TripDetails) => submittedValue(state, field) ?? initial?.[field] ?? "";
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form action={formAction} className="@container space-y-5" noValidate>
       <FormAlert state={state} />
       <Field label="Nombre del viaje" error={fieldError(state, "name")}>
         {(props) => (
@@ -30,7 +30,7 @@ export function TripForm({ action, initial, submitLabel }: TripFormProps) {
           <Input {...props} name="destination" placeholder="Bariloche, Argentina" defaultValue={value("destination")} />
         )}
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 @md:grid-cols-2">
         <Field label="Desde" error={fieldError(state, "startDate")}>
           {(props) => <Input {...props} name="startDate" type="date" defaultValue={value("startDate")} required />}
         </Field>
