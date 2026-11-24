@@ -36,3 +36,15 @@ export function tripDays(trip: Pick<Trip, "startDate" | "endDate">): DateOnly[] 
 export function tripLength(trip: Pick<Trip, "startDate" | "endDate">): number {
   return daysInRange(trip.startDate, trip.endDate);
 }
+
+export type TripTiming =
+  | { kind: "upcoming"; daysUntil: number }
+  | { kind: "ongoing"; dayNumber: number; totalDays: number }
+  | { kind: "past" };
+
+/** Where a trip stands relative to `today`: how many days are left, which day it is, or whether it's over. */
+export function tripTiming(trip: Pick<Trip, "startDate" | "endDate">, today: DateOnly): TripTiming {
+  if (today < trip.startDate) return { kind: "upcoming", daysUntil: daysInRange(today, trip.startDate) - 1 };
+  if (today > trip.endDate) return { kind: "past" };
+  return { kind: "ongoing", dayNumber: daysInRange(trip.startDate, today), totalDays: tripLength(trip) };
+}
