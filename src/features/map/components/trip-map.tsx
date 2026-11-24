@@ -150,7 +150,8 @@ export function TripMap({ groups, focusId }: TripMapProps) {
       </div>
       {selected !== ALL && !groups.find((g) => g.key === selected)?.isIdeas && (
         <p className="text-xs text-slate-500">
-          La línea punteada une las paradas en el orden del itinerario. Si zigzaguea, quizás convenga reordenar el día.
+          La línea punteada une las paradas en el orden del itinerario. Si zigzaguea, usá «Optimizar recorrido» en el
+          itinerario.
         </p>
       )}
     </div>
