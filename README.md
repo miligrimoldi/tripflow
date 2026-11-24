@@ -29,6 +29,9 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 - **Gastos divididos** (sin necesidad de Splitwise): en cada gasto se indica quién lo pagó y entre quiénes se divide.
   El grupo ve el saldo de cada integrante y **la menor cantidad de transferencias** para quedar a mano, puede marcar
   cada una como pagada con un clic, registrar pagos parciales y deshacerlos.
+- **Varias monedas**: el viaje tiene una moneda principal (pesos por defecto) y cada gasto se puede cargar en la moneda
+  en que se pagó (reales en Brasil, dólares en un hotel). La app sugiere la cotización del día (para el dólar: tarjeta,
+  oficial, blue y MEP) y muestra el equivalente mientras se escribe; la cotización siempre se puede editar.
 - **Invitación por link** (pensado para compartir por WhatsApp): vence a los 7 días y regenerarlo invalida el anterior.
 - **Roles**: quien organiza (`OWNER`) edita el viaje, invita y gestiona integrantes; quienes colaboran (`EDITOR`)
   agregan y organizan actividades.
@@ -159,6 +162,13 @@ src/
   la regla greedy (el que más debe le paga al que más le deben), que garantiza a lo sumo n − 1. Los tests comparan
   contra fuerza bruta sobre todas las particiones posibles. Los pagos entre integrantes se guardan como movimientos
   (`Settlement`), no como edición de gastos, así el historial queda claro y cada pago se puede deshacer.
+- **Monedas y cotizaciones.** Cada gasto en otra moneda guarda lo que se pagó, la moneda y la cotización usada, y su
+  monto en la moneda del viaje se calcula una sola vez al guardarlo: si el dólar sube, lo ya pagado y las deudas no
+  cambian solas. Totales, presupuesto y cuentas siguen trabajando con un único monto en centavos. La conversión usa
+  aritmética entera (`BigInt`, cotización escalada por 10⁸) y redondea al centavo. Las cotizaciones sugeridas vienen de
+  un puerto `ExchangeRateSource` con dos adaptadores: DolarApi para todo lo que involucra pesos argentinos (con los
+  distintos tipos de dólar, tarjeta primero porque es lo más común afuera) y Frankfurter (BCE) entre otras monedas. Si
+  la fuente falla no hay error, solo no hay sugerencia. Las cotizaciones se escriben como en Argentina ("2.099,5").
 - **Votos idempotentes.** El caso de uso es `setVote(voted: true | false)` y no "toggle": un doble clic o un reintento
   no puede deshacer el voto. En la base, la clave primaria compuesta `(activityId, userId)` impide votar dos veces
   aunque lleguen dos requests a la vez. En la UI el voto se ve al instante (`useOptimistic`) y se confirma con el
@@ -215,6 +225,8 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Invitaciones: unirse, idempotencia, vencimiento, invalidar el link anterior, quitar integrantes y abandonar el viaje.
 - Presupuesto: parseo de montos en distintos formatos, resumen contra el presupuesto (ok / cerca del límite /
   excedido), desglose por categoría, división por persona sin perder centavos y permisos.
+- Monedas: parseo de cotizaciones ("2.099,5", "0,00062"), conversión exacta con redondeo, respuestas de DolarApi y
+  Frankfurter, y que totales y cuentas usen el monto convertido.
 - Gastos divididos: partes que suman exactamente el total, saldos con pagos parciales, quienes ya no están en el viaje,
   y la menor cantidad de transferencias contra fuerza bruta en cientos de grupos aleatorios.
 - Recorridos: optimizador vs. fuerza bruta (con y sin horarios), heurística para días largos, anclas por horario,
