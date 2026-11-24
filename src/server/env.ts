@@ -11,6 +11,11 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
   /** Photon geocoding API. The public instance is fine for low traffic. */
   PHOTON_URL: z.url().default("https://photon.komoot.io/api/"),
+  /**
+   * Optional OSRM server for real driving times in route optimization.
+   * Without it, routes are optimized with straight-line distances.
+   */
+  ROUTING_URL: z.url().optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
