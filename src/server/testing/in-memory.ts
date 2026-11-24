@@ -355,9 +355,9 @@ export function createTestApp() {
     repositories: { trips, members, invitations, activities, expenses, discussions },
     tripService: new TripService(trips, activities, access),
     activityService: new ActivityService(activities, trips, access),
+    discussionService: new DiscussionService(discussions, activities, access),
     budgetService: new BudgetService(expenses, trips, activities, members, access),
     routeService: new RouteService(activities, trips, new StraightLineTravelCost(), access),
-    discussionService: new DiscussionService(discussions, activities, access),
     membershipService: new MembershipService(members, invitations, trips, access, new SequentialTokens(), clock),
     addUser: (name: string) => db.addUser(name),
   };
