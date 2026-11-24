@@ -12,7 +12,8 @@ import { formatDayLong } from "@/lib/format";
 import { orNotFound } from "@/lib/page-data";
 import { itineraryPoints } from "@/server/activities/activity";
 import { requireUser } from "@/server/auth/session";
-import { activityService, membershipService, placeService, tripService } from "@/server/container";
+import { activityService, budgetService, membershipService, placeService, tripService } from "@/server/container";
+import { formatMoney } from "@/server/shared/money";
 import { hasPermission } from "@/server/members/member";
 
 export async function generateMetadata({ params }: PageProps<"/trips/[tripId]">): Promise<Metadata> {
@@ -30,12 +31,17 @@ export default function TripPage({ params }: PageProps<"/trips/[tripId]">) {
 async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "params">) {
   const { tripId } = await params;
   const user = await requireUser(`/trips/${tripId}`);
-  const [{ trip, role }, itinerary, members] = await orNotFound(
+  const [{ trip, role }, itinerary, members, activityCosts] = await orNotFound(
     Promise.all([
       tripService.get(user.id, tripId),
       activityService.getItinerary(user.id, tripId),
       membershipService.listMembers(user.id, tripId),
+      budgetService.getActivityCosts(user.id, tripId),
     ]),
+  );
+  // Formatted on the server so client and server render the same text.
+  const costs = Object.fromEntries(
+    [...activityCosts].map(([activityId, cents]) => [activityId, formatMoney(cents, trip.currency)]),
   );
 
   const canManage = hasPermission(role, "activity:manage");
@@ -54,6 +60,7 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
         slots={toBoardSlots(itinerary)}
         dayOptions={dayOptions}
         canManage={canManage}
+        costs={costs}
         sidebar={
           canManage && (
             <Card className="p-5">

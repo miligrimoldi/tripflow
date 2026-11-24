@@ -8,7 +8,7 @@ import { tripLength, type Trip } from "@/server/trips/trip";
 interface TripHeaderProps {
   trip: Trip;
   members: TripMember[];
-  active: "itinerary" | "map" | "settings";
+  active: "itinerary" | "map" | "budget" | "settings";
 }
 
 export function TripHeader({ trip, members, active }: TripHeaderProps) {
@@ -16,6 +16,7 @@ export function TripHeader({ trip, members, active }: TripHeaderProps) {
   const tabs = [
     { id: "itinerary", label: "Itinerario", href: `/trips/${trip.id}` },
     { id: "map", label: "Mapa", href: `/trips/${trip.id}/map` },
+    { id: "budget", label: "Presupuesto", href: `/trips/${trip.id}/budget` },
     { id: "settings", label: "Grupo y ajustes", href: `/trips/${trip.id}/settings` },
   ] as const;
 
@@ -46,14 +47,14 @@ export function TripHeader({ trip, members, active }: TripHeaderProps) {
           )}
         </div>
       </div>
-      <nav className="flex gap-1 border-b border-slate-200">
+      <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-slate-200 px-4 sm:mx-0 sm:px-0">
         {tabs.map((tab) => (
           <Link
             key={tab.id}
             href={tab.href}
             aria-current={active === tab.id ? "page" : undefined}
             className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium",
+              "-mb-px shrink-0 border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap",
               active === tab.id
                 ? "border-brand-600 text-brand-700"
                 : "border-transparent text-slate-500 hover:text-slate-700",

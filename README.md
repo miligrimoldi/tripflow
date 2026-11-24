@@ -15,6 +15,9 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
 - **Buscador de lugares**: al cargar la ubicación se sugieren lugares reales, priorizando los cercanos al viaje.
 - **Mapa del viaje**: todas las actividades ubicadas, con marcadores numerados y coloreados por día, filtro por día y el
   recorrido de cada día en orden, para detectar días que conviene reordenar.
+- **Presupuesto compartido**: gastos estimados por categoría (alojamiento, transporte, comidas…), opcionalmente
+  vinculados a una actividad, con un presupuesto total, cuánto queda, desglose por categoría y cuánto toca por persona.
+  El costo de cada actividad se ve en el itinerario.
 - **Invitación por link** (pensado para compartir por WhatsApp): vence a los 7 días y regenerarlo invalida el anterior.
 - **Roles**: quien organiza (`OWNER`) edita el viaje, invita y gestiona integrantes; quienes colaboran (`EDITOR`)
   agregan y organizan actividades.
@@ -120,6 +123,10 @@ src/
 
 ### Otras decisiones de diseño
 
+- **Dinero en centavos enteros.** Los montos se guardan como `BIGINT` de centavos (con `Int` el máximo sería ~21
+  millones, poco para un viaje en pesos) y nunca se opera con decimales. Los montos se escriben como en Argentina
+  (`1.234,50`) o en inglés (`1,234.50`): `parseAmountToCents` resuelve la ambigüedad con reglas explícitas y testeadas. La
+  división por persona reparte el resto centavo a centavo (`splitEvenly`), así la suma da exactamente el total.
 - **Fechas sin hora (`DateOnly`).** Un día del viaje es un concepto de calendario: "10 de julio" es el mismo día para
   todo el grupo, esté en la zona horaria que esté. El dominio usa strings `YYYY-MM-DD` y solo la capa de persistencia
   convierte a `@db.Date`, lo que evita los clásicos errores de un día de diferencia.
@@ -147,6 +154,8 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Viajes: validaciones, permisos y que acortar el viaje mueva actividades a Ideas.
 - Actividades: ideas vs. días programados, fechas fuera del viaje, URLs peligrosas, reordenar, mover.
 - Invitaciones: unirse, idempotencia, vencimiento, invalidar el link anterior, quitar integrantes y abandonar el viaje.
+- Presupuesto: parseo de montos en distintos formatos, resumen contra el presupuesto (ok / cerca del límite /
+  excedido), desglose por categoría, división por persona sin perder centavos y permisos.
 - Lugares y mapa: coordenadas válidas (ambas o ninguna, rangos), parseo de respuestas de Photon, sesgo por zona del
   viaje y armado de las capas del mapa por día.
 
@@ -155,6 +164,6 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 - Tests de integración de los repositorios contra un Postgres efímero (Testcontainers) y tests E2E con Playwright.
 - Actualización en tiempo real (SSE o WebSockets) cuando otra persona edita el viaje.
 - Login con Google, verificación de email y recuperación de contraseña.
-- Presupuesto compartido.
+- Gastos divididos: quién pagó cada gasto y quién le debe a quién, con la menor cantidad de transferencias.
 - Votos o comentarios en las ideas.
 - Mapa: rutas reales por calle (en vez de líneas rectas) y sugerir el orden más corto para cada día.

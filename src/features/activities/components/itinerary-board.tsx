@@ -24,6 +24,8 @@ interface ItineraryBoardProps {
   slots: BoardSlots;
   dayOptions: DayOption[];
   canManage: boolean;
+  /** Formatted estimated cost per activity id (from the budget). */
+  costs: Record<string, string>;
   /** Rendered at the top of the sidebar, above the ideas board. */
   sidebar?: ReactNode;
 }
@@ -35,7 +37,14 @@ interface ItineraryBoardProps {
  * dragging and persists the final position with a server action. If saving
  * fails, it rolls back to the last known server state.
  */
-export function ItineraryBoard({ days, slots: serverSlots, dayOptions, canManage, sidebar }: ItineraryBoardProps) {
+export function ItineraryBoard({
+  days,
+  slots: serverSlots,
+  dayOptions,
+  canManage,
+  costs,
+  sidebar,
+}: ItineraryBoardProps) {
   const [slots, setSlots] = useState(serverSlots);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -62,7 +71,7 @@ export function ItineraryBoard({ days, slots: serverSlots, dayOptions, canManage
   }
 
   const ideas = slots[IDEAS_SLOT] ?? [];
-  const slotProps = { dayOptions, canManage };
+  const slotProps = { dayOptions, canManage, costs };
 
   return (
     <DragDropProvider
@@ -149,10 +158,11 @@ interface SlotProps {
   emptyText: string;
   dayOptions: DayOption[];
   canManage: boolean;
+  costs: Record<string, string>;
 }
 
 /** A droppable list (a day or the ideas board). Empty slots still accept drops. */
-function Slot({ slotId, activities, emptyText, dayOptions, canManage }: SlotProps) {
+function Slot({ slotId, activities, emptyText, dayOptions, canManage, costs }: SlotProps) {
   const { ref, isDropTarget } = useDroppable({
     id: slotId,
     type: "slot",
@@ -180,6 +190,7 @@ function Slot({ slotId, activities, emptyText, dayOptions, canManage }: SlotProp
           slotId={slotId}
           dayOptions={dayOptions}
           canManage={canManage}
+          estimatedCost={costs[activity.id]}
         />
       ))}
       {activities.length === 0 && (
@@ -197,9 +208,10 @@ interface SortableActivityProps {
   slotId: string;
   dayOptions: DayOption[];
   canManage: boolean;
+  estimatedCost?: string;
 }
 
-function SortableActivity({ activity, index, slotId, dayOptions, canManage }: SortableActivityProps) {
+function SortableActivity({ activity, index, slotId, dayOptions, canManage, estimatedCost }: SortableActivityProps) {
   const { ref, handleRef, isDragging } = useSortable({
     id: activity.id,
     index,
@@ -215,6 +227,7 @@ function SortableActivity({ activity, index, slotId, dayOptions, canManage }: So
         activity={activity}
         dayOptions={dayOptions}
         canManage={canManage}
+        estimatedCost={estimatedCost}
         className={cn(isDragging && "shadow-lg ring-2 ring-brand-500")}
         dragHandle={
           canManage && (
