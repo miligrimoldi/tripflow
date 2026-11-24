@@ -8,7 +8,7 @@ import { updateExpenseAction } from "@/features/budget/actions";
 import { ExpenseForm } from "@/features/budget/components/expense-form";
 import { orNotFound } from "@/lib/page-data";
 import { requireUser } from "@/server/auth/session";
-import { activityService, budgetService, tripService } from "@/server/container";
+import { activityService, budgetService, membershipService, tripService } from "@/server/container";
 import { hasPermission } from "@/server/members/member";
 import { centsToInput } from "@/server/shared/money";
 
@@ -29,11 +29,12 @@ export default function EditExpensePage({ params }: Props) {
 async function EditExpense({ params }: Pick<Props, "params">) {
   const { tripId, expenseId } = await params;
   const user = await requireUser();
-  const [{ trip, role }, expense, itinerary] = await orNotFound(
+  const [{ trip, role }, expense, itinerary, members] = await orNotFound(
     Promise.all([
       tripService.get(user.id, tripId),
       budgetService.getExpense(user.id, expenseId),
       activityService.getItinerary(user.id, tripId),
+      membershipService.listMembers(user.id, tripId),
     ]),
   );
   if (expense.tripId !== trip.id || !hasPermission(role, "expense:manage")) notFound();
@@ -49,11 +50,14 @@ async function EditExpense({ params }: Pick<Props, "params">) {
           action={updateExpenseAction.bind(null, expense.id)}
           currency={trip.currency}
           activityOptions={toActivityOptions(itinerary)}
+          members={members.map((member) => ({ id: member.userId, name: member.user.name }))}
           initial={{
             description: expense.description,
             category: expense.category,
             amount: centsToInput(expense.amountCents),
             activityId: expense.activity?.id ?? "",
+            paidById: expense.paidBy?.id ?? "",
+            participantIds: expense.participants.map((participant) => participant.id),
           }}
           submitLabel="Guardar cambios"
         />

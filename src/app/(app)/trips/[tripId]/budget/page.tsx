@@ -8,11 +8,12 @@ import { BudgetSettingsForm } from "@/features/budget/components/budget-settings
 import { BudgetSummaryCard, CategoryBreakdown } from "@/features/budget/components/budget-summary";
 import { ExpenseForm } from "@/features/budget/components/expense-form";
 import { ExpenseList } from "@/features/budget/components/expense-list";
+import { SettleUpPanel } from "@/features/budget/components/settle-up-panel";
 import { TripHeader } from "@/features/trips/components/trip-header";
 import { tripMetadata } from "@/features/trips/metadata";
 import { orNotFound } from "@/lib/page-data";
 import { requireUser } from "@/server/auth/session";
-import { activityService, budgetService, membershipService } from "@/server/container";
+import { activityService, budgetService, membershipService, settleUpService } from "@/server/container";
 import { hasPermission } from "@/server/members/member";
 import { centsToInput } from "@/server/shared/money";
 
@@ -33,15 +34,17 @@ export default function BudgetPage({ params }: Props) {
 async function Budget({ params }: Pick<Props, "params">) {
   const { tripId } = await params;
   const user = await requireUser(`/trips/${tripId}/budget`);
-  const [{ trip, expenses, summary }, members, itinerary] = await orNotFound(
+  const [{ trip, expenses, summary }, members, itinerary, settleUp] = await orNotFound(
     Promise.all([
       budgetService.getOverview(user.id, tripId),
       membershipService.listMembers(user.id, tripId),
       activityService.getItinerary(user.id, tripId),
+      settleUpService.getOverview(user.id, tripId),
     ]),
   );
   const role = members.find((member) => member.userId === user.id)!.role;
   const canManage = hasPermission(role, "expense:manage");
+  const memberOptions = members.map((member) => ({ id: member.userId, name: member.user.name }));
 
   return (
     <div className="space-y-8">
@@ -50,10 +53,17 @@ async function Budget({ params }: Pick<Props, "params">) {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <BudgetSummaryCard summary={summary} currency={trip.currency} memberCount={members.length} />
+          <SettleUpPanel
+            tripId={trip.id}
+            overview={settleUp}
+            currency={trip.currency}
+            members={memberOptions}
+            canManage={canManage}
+          />
           <CategoryBreakdown summary={summary} currency={trip.currency} />
           <section aria-labelledby="expenses-title" className="space-y-3">
             <h2 id="expenses-title" className="text-lg font-semibold text-slate-900">
-              Gastos estimados ({expenses.length})
+              Gastos ({expenses.length})
             </h2>
             <ExpenseList tripId={trip.id} expenses={expenses} currency={trip.currency} canManage={canManage} />
           </section>
@@ -65,12 +75,13 @@ async function Budget({ params }: Pick<Props, "params">) {
               <CardHeading
                 icon={Plus}
                 title="Agregar gasto"
-                description="Montos estimados, para tener una idea del total."
+                description="Estimados para planificar, o ya pagados para dividir las cuentas."
               />
               <ExpenseForm
                 action={addExpenseAction.bind(null, trip.id)}
                 currency={trip.currency}
                 activityOptions={toActivityOptions(itinerary)}
+                members={memberOptions}
                 submitLabel="Agregar"
               />
             </Card>
