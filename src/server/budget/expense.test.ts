@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { costsByActivity, summarizeBudget, type ExpenseCategory } from "./expense";
+import { ValidationError } from "../shared/errors";
+import { costsByActivity, priceInTripCurrency, summarizeBudget, type ExpenseCategory } from "./expense";
 
 const expense = (category: ExpenseCategory, amountCents: number, activityId?: string) => ({
   category,
@@ -57,5 +58,32 @@ describe("costsByActivity", () => {
       expense("OTHER", 9_999),
     ]);
     expect(Object.fromEntries(costs)).toEqual({ ski: 1_500, dinner: 700 });
+  });
+});
+
+describe("priceInTripCurrency", () => {
+  it("keeps amounts already in the trip's currency", () => {
+    expect(priceInTripCurrency({ amountCents: 1500, currency: null, rate: null }, "ARS")).toEqual({
+      amountCents: 1500,
+      original: null,
+    });
+    expect(priceInTripCurrency({ amountCents: 1500, currency: "ARS", rate: "999" }, "ARS").original).toBeNull();
+  });
+
+  it("converts other currencies and keeps what was paid and the rate used", () => {
+    // A US$ 120 dinner paid by card, at 2.099,5 pesos per dollar.
+    expect(priceInTripCurrency({ amountCents: 12_000, currency: "USD", rate: "2099.5" }, "ARS")).toEqual({
+      amountCents: 25_194_000,
+      original: { currency: "USD", amountCents: 12_000, rate: "2099.5" },
+    });
+  });
+
+  it("needs a usable rate for another currency", () => {
+    expect(() => priceInTripCurrency({ amountCents: 12_000, currency: "USD", rate: null }, "ARS")).toThrow(
+      ValidationError,
+    );
+    expect(() => priceInTripCurrency({ amountCents: 1, currency: "ARS", rate: "0.001" }, "USD")).toThrow(
+      ValidationError,
+    );
   });
 });

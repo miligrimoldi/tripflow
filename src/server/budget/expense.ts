@@ -1,4 +1,5 @@
-import { splitEvenly } from "../shared/money";
+import { ValidationError } from "../shared/errors";
+import { convertCents, splitEvenly, type Currency } from "../shared/money";
 
 export const EXPENSE_CATEGORIES = ["ACCOMMODATION", "TRANSPORT", "FOOD", "ACTIVITIES", "SHOPPING", "OTHER"] as const;
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
@@ -8,13 +9,24 @@ export interface Person {
   name: string;
 }
 
+/** How an expense paid in another currency was converted. */
+export interface ForeignPrice {
+  currency: Currency;
+  /** What was actually paid, in cents of `currency`. */
+  amountCents: number;
+  /** 1 unit of `currency` = `rate` of the trip's currency (canonical decimal string). */
+  rate: string;
+}
+
 export interface Expense {
   id: string;
   tripId: string;
   description: string;
   category: ExpenseCategory;
-  /** Estimated cost in cents of the trip's currency. */
+  /** Cost in cents of the trip's currency (converted, if paid in another one). */
   amountCents: number;
+  /** Set when it was paid in another currency. */
+  original: ForeignPrice | null;
   /** The activity this cost belongs to, if any (e.g. a museum ticket). */
   activity: { id: string; title: string } | null;
   /** Who paid it. `null` while it's only an estimate: it doesn't create debts yet. */
@@ -29,12 +41,35 @@ export interface ExpenseDetails {
   description: string;
   category: ExpenseCategory;
   amountCents: number;
+  original: ForeignPrice | null;
   activityId: string | null;
   paidById: string | null;
   participantIds: string[];
 }
 
 export type NewExpense = ExpenseDetails & { tripId: string; createdById: string };
+
+/**
+ * The expense's amount in the trip's currency. Paid in the same currency, it
+ * is what was typed; in another one, it is converted with the given rate,
+ * which is kept with the expense so the conversion never changes later.
+ */
+export function priceInTripCurrency(
+  { amountCents, currency, rate }: { amountCents: number; currency: Currency | null; rate: string | null },
+  tripCurrency: Currency,
+): Pick<ExpenseDetails, "amountCents" | "original"> {
+  if (currency === null || currency === tripCurrency) return { amountCents, original: null };
+  if (rate === null) {
+    throw new ValidationError("Falta la cotización", {
+      rate: [`Indicá a cuánto estaba 1 ${currency} en ${tripCurrency}`],
+    });
+  }
+  const converted = convertCents(amountCents, rate);
+  if (converted === null) {
+    throw new ValidationError("Revisá la cotización", { rate: ["Con esa cotización el monto no es válido"] });
+  }
+  return { amountCents: converted, original: { currency, amountCents, rate } };
+}
 
 /** Share of the budget used from which we warn that it's running out. */
 export const BUDGET_WARNING_RATIO = 0.9;

@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
-import type { Expense, ExpenseDetails, NewExpense } from "@/server/budget/expense";
+import type { Expense, ExpenseDetails, ForeignPrice, NewExpense } from "@/server/budget/expense";
+import { isCurrency } from "@/server/shared/money";
 import type { ExpenseRepository } from "@/server/budget/expense.repository";
 import type { Db } from "./client";
 
@@ -22,6 +23,7 @@ function toExpense(row: ExpenseRow): Expense {
     category: row.category,
     // BIGINT column; amounts are capped far below Number.MAX_SAFE_INTEGER.
     amountCents: Number(row.amountCents),
+    original: toForeignPrice(row),
     activity: row.activity,
     paidBy: row.paidBy,
     participants: row.participants.map((participant) => participant.user),
@@ -30,8 +32,30 @@ function toExpense(row: ExpenseRow): Expense {
   };
 }
 
-function toRowData({ description, category, amountCents, activityId, paidById }: ExpenseDetails) {
-  return { description, category, amountCents: BigInt(amountCents), activityId, paidById };
+function toForeignPrice(row: ExpenseRow): ForeignPrice | null {
+  const { originalCurrency, originalAmountCents, exchangeRate } = row;
+  if (!originalCurrency || originalAmountCents === null || exchangeRate === null || !isCurrency(originalCurrency)) {
+    return null;
+  }
+  // toFixed (not toString) never uses exponent notation; trailing zeros are dropped.
+  const rate = exchangeRate
+    .toFixed()
+    .replace(/(\.\d*?)0+$/, "$1")
+    .replace(/\.$/, "");
+  return { currency: originalCurrency, amountCents: Number(originalAmountCents), rate };
+}
+
+function toRowData({ description, category, amountCents, original, activityId, paidById }: ExpenseDetails) {
+  return {
+    description,
+    category,
+    amountCents: BigInt(amountCents),
+    originalCurrency: original?.currency ?? null,
+    originalAmountCents: original ? BigInt(original.amountCents) : null,
+    exchangeRate: original?.rate ?? null,
+    activityId,
+    paidById,
+  };
 }
 
 const participantRows = (participantIds: string[]) => participantIds.map((userId) => ({ userId }));

@@ -100,6 +100,32 @@ describe("BudgetService", () => {
       expect((await add(ana.id, { participantIds: bruno.id })).participants).toEqual([{ id: bruno.id, name: "Bruno" }]);
     });
 
+    it("converts costs paid in another currency, keeping what was paid", async () => {
+      // The trip is in pesos (the default); a hotel in Brazil was paid in reais.
+      const hotel = await add(ana.id, { amount: "1.200", currency: "BRL", rate: "269,9577", paidById: ana.id });
+      expect(hotel).toMatchObject({
+        amountCents: 32_394_924,
+        original: { currency: "BRL", amountCents: 120_000, rate: "269.9577" },
+      });
+
+      // Totals and balances use the converted amount.
+      const { summary } = await app.budgetService.getOverview(ana.id, tripId);
+      expect(summary.totalCents).toBe(32_394_924);
+      const overview = await app.settleUpService.getOverview(ana.id, tripId);
+      expect(overview.transfers).toEqual([{ fromId: bruno.id, toId: ana.id, amountCents: 16_197_462 }]);
+    });
+
+    it("asks for the rate when the currency is not the trip's", async () => {
+      await expect(add(ana.id, { currency: "USD" })).rejects.toMatchObject({
+        fieldErrors: { rate: expect.any(Array) },
+      });
+      await expect(add(ana.id, { currency: "USD", rate: "abc" })).rejects.toMatchObject({
+        fieldErrors: { rate: expect.any(Array) },
+      });
+      // Same currency as the trip: the rate is ignored.
+      expect((await add(ana.id, { currency: "ARS", rate: "" })).original).toBeNull();
+    });
+
     it("updates and deletes costs", async () => {
       const expense = await add(ana.id, { amount: "1000" });
       await app.budgetService.updateExpense(bruno.id, expense.id, {

@@ -13,6 +13,7 @@ const expense = (amountCents: number, paidBy: Person | null, participants: Perso
   description: "gasto",
   category: "FOOD",
   amountCents,
+  original: null,
   activity: null,
   paidBy,
   participants,
