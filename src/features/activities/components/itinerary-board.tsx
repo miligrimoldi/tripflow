@@ -7,6 +7,7 @@ import { useSortable } from "@dnd-kit/react/sortable";
 import { CalendarPlus, GripVertical, Lightbulb } from "lucide-react";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { IconTile } from "@/components/ui/icon-tile";
+import type { DiscussionView, DiscussionViews } from "@/features/discussions/view";
 import { DayRouteOptimizer } from "@/features/routes/components/day-route-optimizer";
 import { cn } from "@/lib/cn";
 import type { Activity } from "@/server/activities/activity";
@@ -31,6 +32,11 @@ interface ItineraryBoardProps {
   canManage: boolean;
   /** Formatted estimated cost per activity id (from the budget). */
   costs: Record<string, string>;
+  /** Votes and comments per activity id. */
+  discussions: DiscussionViews;
+  canDiscuss: boolean;
+  /** The idea that clearly leads the votes, if any. */
+  mostVotedId: string | null;
   /** Rendered at the top of the sidebar, above the ideas board. */
   sidebar?: ReactNode;
 }
@@ -49,6 +55,9 @@ export function ItineraryBoard({
   dayOptions,
   canManage,
   costs,
+  discussions,
+  canDiscuss,
+  mostVotedId,
   sidebar,
 }: ItineraryBoardProps) {
   const [slots, setSlots] = useState(serverSlots);
@@ -77,7 +86,7 @@ export function ItineraryBoard({
   }
 
   const ideas = slots[IDEAS_SLOT] ?? [];
-  const slotProps = { dayOptions, canManage, costs };
+  const slotProps = { dayOptions, canManage, costs, discussions, canDiscuss, mostVotedId };
 
   return (
     <DragDropProvider
@@ -200,10 +209,23 @@ interface SlotProps {
   dayOptions: DayOption[];
   canManage: boolean;
   costs: Record<string, string>;
+  discussions: DiscussionViews;
+  canDiscuss: boolean;
+  mostVotedId: string | null;
 }
 
 /** A droppable list (a day or the ideas board). Empty slots still accept drops. */
-function Slot({ slotId, activities, emptyText, dayOptions, canManage, costs }: SlotProps) {
+function Slot({
+  slotId,
+  activities,
+  emptyText,
+  dayOptions,
+  canManage,
+  costs,
+  discussions,
+  canDiscuss,
+  mostVotedId,
+}: SlotProps) {
   const { ref, isDropTarget } = useDroppable({
     id: slotId,
     type: "slot",
@@ -232,6 +254,9 @@ function Slot({ slotId, activities, emptyText, dayOptions, canManage, costs }: S
           dayOptions={dayOptions}
           canManage={canManage}
           estimatedCost={costs[activity.id]}
+          discussion={discussions[activity.id]}
+          canDiscuss={canDiscuss}
+          mostVoted={activity.id === mostVotedId}
         />
       ))}
       {activities.length === 0 && (
@@ -251,9 +276,22 @@ interface SortableActivityProps {
   dayOptions: DayOption[];
   canManage: boolean;
   estimatedCost?: string;
+  discussion?: DiscussionView;
+  canDiscuss: boolean;
+  mostVoted: boolean;
 }
 
-function SortableActivity({ activity, index, slotId, dayOptions, canManage, estimatedCost }: SortableActivityProps) {
+function SortableActivity({
+  activity,
+  index,
+  slotId,
+  dayOptions,
+  canManage,
+  estimatedCost,
+  discussion,
+  canDiscuss,
+  mostVoted,
+}: SortableActivityProps) {
   const { ref, handleRef, isDragging } = useSortable({
     id: activity.id,
     index,
@@ -270,6 +308,9 @@ function SortableActivity({ activity, index, slotId, dayOptions, canManage, esti
         dayOptions={dayOptions}
         canManage={canManage}
         estimatedCost={estimatedCost}
+        discussion={discussion}
+        canDiscuss={canDiscuss}
+        mostVoted={mostVoted}
         className={cn(isDragging && "shadow-lift ring-2 ring-brand-500")}
         dragHandle={
           canManage && (

@@ -2,11 +2,13 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { ActivityService } from "./activities/activity.service";
 import { BudgetService } from "./budget/budget.service";
+import { DiscussionService } from "./discussions/discussion.service";
 import { env } from "./env";
 import { PhotonPlaceSearch } from "./infrastructure/photon/photon-place-search";
 import { OsrmDirections } from "./infrastructure/routing/osrm-directions";
 import { OsrmTravelCost } from "./infrastructure/routing/osrm-travel-cost";
 import { prisma } from "./infrastructure/prisma/client";
+import { PrismaDiscussionRepository } from "./infrastructure/prisma/prisma-discussion.repository";
 import { PrismaActivityRepository } from "./infrastructure/prisma/prisma-activity.repository";
 import { PrismaExpenseRepository } from "./infrastructure/prisma/prisma-expense.repository";
 import { PrismaInvitationRepository } from "./infrastructure/prisma/prisma-invitation.repository";
@@ -58,6 +60,12 @@ export const budgetService = new BudgetService(
   tripRepository,
   activityRepository,
   membershipRepository,
+  tripAccess,
+);
+
+export const discussionService = new DiscussionService(
+  new PrismaDiscussionRepository(prisma),
+  activityRepository,
   tripAccess,
 );
 

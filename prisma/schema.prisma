@@ -29,6 +29,8 @@ model User {
   createdActivities  Activity[]
   createdInvitations TripInvitation[]
   createdExpenses    Expense[]
+  activityVotes      ActivityVote[]
+  activityComments   ActivityComment[]
 
   @@map("user")
 }
@@ -175,9 +177,11 @@ model Activity {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  createdBy User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  trip      Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   expenses  Expense[]
+  votes     ActivityVote[]
+  comments  ActivityComment[]
 
   @@index([tripId, date, position])
   @@map("activity")
@@ -214,4 +218,33 @@ model Expense {
   @@index([tripId])
   @@index([activityId])
   @@map("expense")
+}
+
+/// "I'd like to do this": one vote per member and idea. The composite key
+/// makes voting twice impossible, even with concurrent requests.
+model ActivityVote {
+  activityId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([activityId, userId])
+  @@map("activity_vote")
+}
+
+/// A message in an activity's conversation ("¿reservamos?", "cierra los lunes").
+model ActivityComment {
+  id         String   @id @default(cuid())
+  activityId String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([activityId, createdAt])
+  @@map("activity_comment")
 }
