@@ -1,6 +1,7 @@
+import { Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Card, Skeleton } from "@/components/ui/card";
+import { Card, CardHeading, Skeleton } from "@/components/ui/card";
 import { createActivityAction } from "@/features/activities/actions";
 import { toBoardSlots } from "@/features/activities/board";
 import { ActivityForm } from "@/features/activities/components/activity-form";
@@ -64,7 +65,11 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
         sidebar={
           canManage && (
             <Card className="p-5">
-              <h2 className="mb-4 font-semibold text-slate-900">Agregar actividad</h2>
+              <CardHeading
+                icon={Plus}
+                title="Agregar actividad"
+                description="Con día, o como idea para decidir después."
+              />
               <ActivityForm
                 action={createActivityAction.bind(null, trip.id)}
                 dayOptions={dayOptions}
@@ -87,7 +92,7 @@ function TripPageSkeleton() {
         <Skeleton className="h-9 w-72" />
         <Skeleton className="h-5 w-96 max-w-full" />
       </div>
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-4">
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />

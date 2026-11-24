@@ -17,8 +17,8 @@ interface AuthPageProps {
 export function AuthPage({ title, subtitle, searchParams, form, footer }: AuthPageProps) {
   return (
     <>
-      <h1 className="text-xl font-bold text-slate-900">{title}</h1>
-      <p className="mt-1 mb-6 text-sm text-slate-600">{subtitle}</p>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900">{title}</h1>
+      <p className="mt-2 mb-8 text-slate-600">{subtitle}</p>
       <Suspense fallback={<Skeleton className="h-64" />}>
         <AuthFormGate searchParams={searchParams} form={form} footer={footer} />
       </Suspense>
@@ -37,7 +37,7 @@ async function AuthFormGate({ searchParams, form, footer }: Pick<AuthPageProps, 
   return (
     <>
       {form(callbackUrl)}
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-8 text-center text-sm text-slate-600">
         {footer.text}{" "}
         <Link href={footerHref} className="font-medium text-brand-700 hover:underline">
           {footer.linkLabel}

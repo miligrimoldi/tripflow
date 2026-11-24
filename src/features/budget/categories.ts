@@ -1,12 +1,14 @@
+import { BedDouble, Package, ShoppingBag, Ticket, TrainFront, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import type { Tone } from "@/components/ui/icon-tile";
 import type { ExpenseCategory } from "@/server/budget/expense";
 
-export const EXPENSE_CATEGORY_META: Record<ExpenseCategory, { label: string; icon: string }> = {
-  ACCOMMODATION: { label: "Alojamiento", icon: "🏨" },
-  TRANSPORT: { label: "Transporte", icon: "🚆" },
-  FOOD: { label: "Comidas", icon: "🍽️" },
-  ACTIVITIES: { label: "Excursiones y entradas", icon: "🎟️" },
-  SHOPPING: { label: "Compras", icon: "🛍️" },
-  OTHER: { label: "Otros", icon: "📦" },
+export const EXPENSE_CATEGORY_META: Record<ExpenseCategory, { label: string; icon: LucideIcon; tone: Tone }> = {
+  ACCOMMODATION: { label: "Alojamiento", icon: BedDouble, tone: "violet" },
+  TRANSPORT: { label: "Transporte", icon: TrainFront, tone: "slate" },
+  FOOD: { label: "Comidas", icon: UtensilsCrossed, tone: "amber" },
+  ACTIVITIES: { label: "Excursiones y entradas", icon: Ticket, tone: "emerald" },
+  SHOPPING: { label: "Compras", icon: ShoppingBag, tone: "pink" },
+  OTHER: { label: "Otros", icon: Package, tone: "stone" },
 };
 
 export const CURRENCY_LABELS: Record<string, string> = {

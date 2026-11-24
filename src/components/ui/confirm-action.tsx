@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { idleState, type ActionState } from "@/lib/action-state";
 import { Button } from "./button";
 import { SubmitButton } from "./submit-button";
@@ -8,6 +8,11 @@ import { SubmitButton } from "./submit-button";
 interface ConfirmActionProps {
   action: () => Promise<ActionState | void>;
   label: string;
+  /**
+   * Rendered icon (e.g. `<Trash />`). An element, not a component, so server
+   * components can pass it to this client component.
+   */
+  icon?: ReactNode;
   confirmLabel: string;
   question: string;
   variant?: "danger" | "secondary" | "ghost";
@@ -21,6 +26,7 @@ interface ConfirmActionProps {
 export function ConfirmAction({
   action,
   label,
+  icon,
   confirmLabel,
   question,
   variant = "danger",
@@ -31,7 +37,14 @@ export function ConfirmAction({
 
   if (!confirming) {
     return (
-      <Button type="button" variant={variant} size={size} onClick={() => setConfirming(true)}>
+      <Button
+        type="button"
+        variant={variant}
+        size={size}
+        onClick={() => setConfirming(true)}
+        className={variant === "ghost" ? "hover:bg-red-50 hover:text-red-700" : undefined}
+      >
+        {icon}
         {label}
       </Button>
     );

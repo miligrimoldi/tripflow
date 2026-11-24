@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, LoaderCircle, MapPin, Search } from "lucide-react";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Input } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
@@ -118,8 +119,19 @@ export function PlaceInput({ defaultLabel, defaultCoordinates, near, placeholder
 
   return (
     <div className="relative">
+      <Search
+        aria-hidden
+        className="pointer-events-none absolute top-[22px] left-3.5 size-4 -translate-y-1/2 text-slate-400"
+      />
+      {status === "loading" && (
+        <LoaderCircle
+          aria-hidden
+          className="pointer-events-none absolute top-[22px] right-3.5 size-4 -translate-y-1/2 animate-spin text-slate-400"
+        />
+      )}
       <Input
         {...fieldProps}
+        className="pl-10"
         name="location"
         value={text}
         placeholder={placeholder}
@@ -148,9 +160,9 @@ export function PlaceInput({ defaultLabel, defaultCoordinates, near, placeholder
           id={listId}
           role="listbox"
           aria-label="Lugares sugeridos"
-          className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+          className="absolute z-20 mt-1.5 max-h-72 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lift"
         >
-          {status === "loading" && <li className="px-3 py-2 text-sm text-slate-500">Buscando…</li>}
+          {status === "loading" && <li className="px-3 py-2.5 text-sm text-slate-500">Buscando lugares…</li>}
           {status === "error" && (
             <li className="px-3 py-2 text-sm text-red-600">No pudimos buscar lugares. Podés escribirlo a mano.</li>
           )}
@@ -170,10 +182,21 @@ export function PlaceInput({ defaultLabel, defaultCoordinates, near, placeholder
                   select(place);
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
-                className={cn("cursor-pointer px-3 py-2", index === activeIndex && "bg-brand-50")}
+                className={cn(
+                  "flex cursor-pointer items-start gap-2.5 rounded-lg px-2.5 py-2",
+                  index === activeIndex && "bg-brand-50",
+                )}
               >
-                <p className="text-sm font-medium text-slate-900">📍 {place.name}</p>
-                {place.description && <p className="text-xs text-slate-500">{place.description}</p>}
+                <MapPin
+                  aria-hidden
+                  className={cn("mt-0.5 size-4 shrink-0", index === activeIndex ? "text-brand-600" : "text-slate-400")}
+                />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-slate-900">{place.name}</span>
+                  {place.description && (
+                    <span className="block truncate text-xs text-slate-500">{place.description}</span>
+                  )}
+                </span>
               </li>
             ))}
         </ul>
@@ -181,7 +204,10 @@ export function PlaceInput({ defaultLabel, defaultCoordinates, near, placeholder
 
       <p className="mt-1 text-xs text-slate-500" aria-live="polite">
         {coordinates ? (
-          <span className="text-emerald-700">✓ Se va a ver en el mapa</span>
+          <span className="inline-flex items-center gap-1 font-medium text-emerald-700">
+            <Check className="size-3.5" aria-hidden />
+            Se va a ver en el mapa
+          </span>
         ) : text.trim() ? (
           "Elegí una opción de la lista para ubicarlo en el mapa."
         ) : null}

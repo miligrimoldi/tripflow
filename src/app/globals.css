@@ -3,17 +3,53 @@
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bricolage);
 
+  /* Brand: teal. */
   --color-brand-50: #f0fdfa;
   --color-brand-100: #ccfbf1;
   --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
   --color-brand-500: #14b8a6;
   --color-brand-600: #0d9488;
   --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
   --color-brand-900: #134e4a;
+  --color-brand-950: #042f2e;
+
+  /* Warm accent: coral, used sparingly for highlights. */
+  --color-coral-50: #fff4f1;
+  --color-coral-100: #ffe4dc;
+  --color-coral-400: #fb8a6e;
+  --color-coral-500: #f4694a;
+  --color-coral-600: #e14d2f;
+
+  /* Warm neutral page background. */
+  --color-sand-50: #fbfaf7;
+  --color-sand-100: #f5f2ec;
+  --color-sand-200: #ebe5da;
+
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.04), 0 12px 32px -8px rgb(15 23 42 / 0.16);
 }
 
 body {
-  background-color: var(--color-slate-50);
+  background-color: var(--color-sand-50);
   color: var(--color-slate-900);
+}
+
+/* Headings use the display font everywhere. */
+h1,
+h2,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* MapLibre popups: match the app's cards. */
+.maplibregl-popup-content {
+  border-radius: 0.875rem !important;
+  padding: 0.75rem 0.875rem !important;
+  box-shadow: var(--shadow-lift) !important;
 }

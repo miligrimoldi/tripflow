@@ -1,6 +1,7 @@
+import { Pencil, TriangleExclamationPoint, UserPlus, Users } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Card, Skeleton } from "@/components/ui/card";
+import { Card, CardHeading, Skeleton } from "@/components/ui/card";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { leaveTripAction } from "@/features/members/actions";
 import { InviteLinkPanel } from "@/features/members/components/invite-link-panel";
@@ -46,7 +47,7 @@ async function TripSettings({ params }: Pick<PageProps<"/trips/[tripId]/settings
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <Card className="p-6">
-            <h2 className="font-semibold text-slate-900">Integrantes ({members.length})</h2>
+            <CardHeading icon={Users} tone="violet" title={`Integrantes (${members.length})`} className="mb-2" />
             <MemberList
               tripId={trip.id}
               members={members}
@@ -57,7 +58,12 @@ async function TripSettings({ params }: Pick<PageProps<"/trips/[tripId]/settings
 
           {canInvite && (
             <Card className="p-6">
-              <h2 className="mb-3 font-semibold text-slate-900">Invitar al viaje</h2>
+              <CardHeading
+                icon={UserPlus}
+                tone="coral"
+                title="Invitar al viaje"
+                description="Compartí el link y quien lo abra se suma como colaborador."
+              />
               <InviteLinkPanel
                 tripId={trip.id}
                 inviteUrl={invitation ? absoluteUrl(`/invite/${invitation.token}`) : null}
@@ -70,16 +76,22 @@ async function TripSettings({ params }: Pick<PageProps<"/trips/[tripId]/settings
         <div className="space-y-6">
           {hasPermission(role, "trip:edit") && (
             <Card className="p-6">
-              <h2 className="mb-1 font-semibold text-slate-900">Datos del viaje</h2>
-              <p className="mb-4 text-xs text-slate-500">
-                Si acortás el viaje, las actividades de los días que se quitan vuelven a Ideas.
-              </p>
+              <CardHeading
+                icon={Pencil}
+                title="Datos del viaje"
+                description="Si acortás el viaje, las actividades de los días que se quitan vuelven a Ideas."
+              />
               <TripForm action={updateTripAction.bind(null, trip.id)} initial={trip} submitLabel="Guardar cambios" />
             </Card>
           )}
 
-          <Card className="border-red-200 p-6">
-            <h2 className="font-semibold text-red-700">Zona de peligro</h2>
+          <Card className="border-red-200/80 p-6">
+            <div className="flex items-center gap-3">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-red-50 text-red-600 ring-1 ring-red-100 ring-inset">
+                <TriangleExclamationPoint className="size-4" aria-hidden />
+              </span>
+              <h2 className="text-lg font-semibold text-red-700">Zona de peligro</h2>
+            </div>
             {hasPermission(role, "trip:delete") ? (
               <>
                 <p className="mt-1 mb-4 text-sm text-slate-600">

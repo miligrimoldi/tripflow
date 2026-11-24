@@ -183,11 +183,16 @@ function FilterChip({
   );
 }
 
-/** Round marker with the stop number (or 💡 for ideas), in the day's color. */
+/** Lucide "lightbulb" icon, as markup (a constant, so it is safe to inject). */
+const LIGHTBULB_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>';
+
+/** Round marker with the stop number (or a lightbulb for ideas), in the day's color. */
 function markerElement(point: MapPoint, group: MapGroup): HTMLElement {
   const element = document.createElement("button");
   element.type = "button";
-  element.textContent = group.isIdeas ? "💡" : String(point.order);
+  if (group.isIdeas) element.innerHTML = LIGHTBULB_SVG;
+  else element.textContent = String(point.order);
   element.setAttribute("aria-label", `${group.shortLabel}: ${point.title}`);
   element.className =
     "flex size-7 cursor-pointer items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-md";
@@ -202,11 +207,11 @@ function popupContent(point: MapPoint, group: MapGroup): HTMLElement {
 
   const title = document.createElement("p");
   title.className = "text-sm font-semibold text-slate-900";
-  title.textContent = `${point.icon} ${point.title}`;
+  title.textContent = point.title;
 
   const meta = document.createElement("p");
   meta.className = "text-xs text-slate-600";
-  meta.textContent = [group.label, point.startTime].filter(Boolean).join(" · ");
+  meta.textContent = [point.categoryLabel, group.label, point.startTime].filter(Boolean).join(" · ");
 
   const location = document.createElement("p");
   location.className = "text-xs text-slate-500";

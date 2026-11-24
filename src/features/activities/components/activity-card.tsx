@@ -1,5 +1,7 @@
+import { Clock, Link2, MapPin, Map as MapIcon, Wallet } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { cn } from "@/lib/cn";
 import type { Activity } from "@/server/activities/activity";
 import { CATEGORY_META } from "../categories";
@@ -17,6 +19,8 @@ interface ActivityCardProps {
   className?: string;
 }
 
+const metaLink = "inline-flex items-center gap-1 font-medium text-brand-700 hover:text-brand-800 hover:underline";
+
 export function ActivityCard({
   activity,
   dayOptions,
@@ -28,53 +32,68 @@ export function ActivityCard({
   const category = CATEGORY_META[activity.category];
 
   return (
-    <article className={cn("rounded-xl border border-slate-200 bg-white p-4 shadow-xs", className)}>
+    <article
+      className={cn(
+        "rounded-2xl border border-slate-200/70 bg-white p-4 shadow-soft transition-shadow hover:shadow-lift",
+        className,
+      )}
+    >
       <div className="flex items-start gap-3">
         {dragHandle}
-        <span className="text-xl leading-none" aria-hidden>
-          {category.icon}
-        </span>
+        <IconTile icon={category.icon} tone={category.tone} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="leading-snug font-semibold text-slate-900">{activity.title}</h3>
+              <p className="text-xs text-slate-500">{category.label}</p>
+            </div>
             {activity.startTime && (
-              <span className="font-mono text-sm font-semibold text-brand-700">{activity.startTime}</span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 font-mono text-xs font-semibold text-brand-700 ring-1 ring-brand-100 ring-inset">
+                <Clock className="size-3" aria-hidden />
+                {activity.startTime}
+              </span>
             )}
-            <h3 className="font-semibold text-slate-900">{activity.title}</h3>
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-            <span className={cn("rounded-full px-2 py-0.5 font-medium ring-1 ring-inset", category.badge)}>
-              {category.label}
-            </span>
-            {activity.location && <span>📍 {activity.location}</span>}
-            {activity.coordinates && (
-              <Link
-                href={`/trips/${activity.tripId}/map?focus=${activity.id}`}
-                className="text-brand-700 underline-offset-2 hover:underline"
-              >
-                🗺️ Ver en el mapa
-              </Link>
-            )}
-            {activity.url && (
-              <a
-                href={activity.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-700 underline-offset-2 hover:underline"
-              >
-                🔗 Ver link
-              </a>
-            )}
-            {estimatedCost && (
-              <Link
-                href={`/trips/${activity.tripId}/budget`}
-                className="font-medium text-slate-700 underline-offset-2 hover:underline"
-              >
-                💰 {estimatedCost}
-              </Link>
-            )}
-            <span>Agregado por {activity.createdBy.name}</span>
-          </div>
-          {activity.notes && <p className="mt-2 text-sm whitespace-pre-line text-slate-600">{activity.notes}</p>}
+
+          {(activity.location || activity.url || estimatedCost) && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600">
+              {activity.location && (
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  <MapPin className="size-3.5 shrink-0 text-slate-400" aria-hidden />
+                  <span className="truncate">{activity.location}</span>
+                </span>
+              )}
+              {activity.coordinates && (
+                <Link href={`/trips/${activity.tripId}/map?focus=${activity.id}`} className={metaLink}>
+                  <MapIcon className="size-3.5" aria-hidden />
+                  Ver en el mapa
+                </Link>
+              )}
+              {activity.url && (
+                <a href={activity.url} target="_blank" rel="noopener noreferrer" className={metaLink}>
+                  <Link2 className="size-3.5" aria-hidden />
+                  Link
+                </a>
+              )}
+              {estimatedCost && (
+                <Link
+                  href={`/trips/${activity.tripId}/budget`}
+                  className="inline-flex items-center gap-1 font-medium text-slate-700 hover:underline"
+                >
+                  <Wallet className="size-3.5 text-slate-400" aria-hidden />
+                  {estimatedCost}
+                </Link>
+              )}
+            </div>
+          )}
+
+          {activity.notes && (
+            <p className="mt-2.5 rounded-lg bg-sand-100 px-3 py-2 text-sm whitespace-pre-line text-slate-600">
+              {activity.notes}
+            </p>
+          )}
+
+          <p className="mt-2 text-xs text-slate-400">Agregado por {activity.createdBy.name}</p>
         </div>
       </div>
       {canManage && (
