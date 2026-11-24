@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Card, Skeleton } from "@/components/ui/card";
@@ -41,13 +41,11 @@ async function EditActivity({ params }: Pick<Props, "params">) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href={`/trips/${trip.id}`} className="text-sm text-slate-500 hover:text-slate-700">
-          ← {trip.name}
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold text-slate-900">Editar actividad</h1>
+      <div className="space-y-3">
+        <BackLink href={`/trips/${trip.id}`}>{trip.name}</BackLink>
+        <h1 className="text-4xl font-bold tracking-tight text-slate-900">Editar actividad</h1>
       </div>
-      <Card className="p-6">
+      <Card className="p-6 sm:p-8">
         <ActivityForm
           action={updateActivityAction.bind(null, activity.id)}
           dayOptions={toDayOptions(trip)}

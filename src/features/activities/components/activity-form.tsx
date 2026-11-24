@@ -41,20 +41,20 @@ export function ActivityForm({ action, dayOptions, initial, near, submitLabel }:
   const submittedCoordinates = submittedPoint(submittedValue(state, "latitude"), submittedValue(state, "longitude"));
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form action={formAction} className="@container space-y-4" noValidate>
       <FormAlert state={state} />
       <Field label="¿Qué quieren hacer?" error={fieldError(state, "title")}>
         {(props) => (
           <Input {...props} name="title" placeholder="Cena en La Cabrera" defaultValue={value("title")} required />
         )}
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 @md:grid-cols-2">
         <Field label="Categoría" error={fieldError(state, "category")}>
           {(props) => (
             <Select {...props} name="category" defaultValue={value("category") || "SIGHTSEEING"}>
               {ACTIVITY_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
-                  {CATEGORY_META[category].icon} {CATEGORY_META[category].label}
+                  {CATEGORY_META[category].label}
                 </option>
               ))}
             </Select>
@@ -63,7 +63,7 @@ export function ActivityForm({ action, dayOptions, initial, near, submitLabel }:
         <Field label="Día" error={fieldError(state, "date")}>
           {(props) => (
             <Select {...props} name="date" defaultValue={value("date")}>
-              <option value="">💡 Guardar como idea</option>
+              <option value="">Guardar como idea (sin día)</option>
               {dayOptions.map((day) => (
                 <option key={day.value} value={day.value}>
                   {day.label}
@@ -73,7 +73,7 @@ export function ActivityForm({ action, dayOptions, initial, near, submitLabel }:
           )}
         </Field>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 @md:grid-cols-2">
         <Field label="Hora (opcional)" error={fieldError(state, "startTime")}>
           {(props) => <Input {...props} name="startTime" type="time" defaultValue={value("startTime")} />}
         </Field>

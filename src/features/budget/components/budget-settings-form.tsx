@@ -19,9 +19,9 @@ export function BudgetSettingsForm({ action, currency, budget }: BudgetSettingsF
   const [state, formAction] = useActionState(action, idleState);
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <form action={formAction} className="@container space-y-4" noValidate>
       <FormAlert state={state} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 @md:grid-cols-2">
         <Field label="Presupuesto total (opcional)" error={fieldError(state, "budget")}>
           {(props) => (
             <Input

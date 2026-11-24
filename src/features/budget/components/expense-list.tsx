@@ -1,6 +1,9 @@
+import { Link2, Pencil, Receipt, Trash } from "lucide-react";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
+import { EmptyState } from "@/components/ui/empty-state";
+import { IconTile } from "@/components/ui/icon-tile";
 import type { Expense } from "@/server/budget/expense";
 import { formatMoney, type Currency } from "@/server/shared/money";
 import { deleteExpenseAction } from "../actions";
@@ -16,40 +19,52 @@ interface ExpenseListProps {
 export function ExpenseList({ tripId, expenses, currency, canManage }: ExpenseListProps) {
   if (expenses.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
-        Todavía no cargaron gastos. Empiecen por los grandes: pasajes y alojamiento.
-      </p>
+      <EmptyState icon={Receipt} title="Todavía no hay gastos" tone="slate">
+        Empiecen por los grandes: pasajes y alojamiento. Después, entradas y comidas.
+      </EmptyState>
     );
   }
 
   return (
-    <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-soft">
       {expenses.map((expense) => {
         const meta = EXPENSE_CATEGORY_META[expense.category];
         return (
-          <li key={expense.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-            <span className="text-xl" aria-hidden>
-              {meta.icon}
-            </span>
+          <li key={expense.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5">
+            <IconTile icon={meta.icon} tone={meta.tone} />
             <div className="min-w-0 flex-1">
               <p className="font-medium text-slate-900">{expense.description}</p>
-              <p className="text-xs text-slate-500">
+              <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-slate-500">
                 {meta.label}
-                {expense.activity && <> · 🔗 {expense.activity.title}</>} · por {expense.createdBy.name}
+                {expense.activity && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Link2 className="size-3" aria-hidden />
+                      {expense.activity.title}
+                    </span>
+                  </>
+                )}
+                <span aria-hidden>·</span>
+                por {expense.createdBy.name}
               </p>
             </div>
-            <p className="font-semibold text-slate-900 tabular-nums">{formatMoney(expense.amountCents, currency)}</p>
+            <p className="font-display text-lg font-semibold text-slate-900 tabular-nums">
+              {formatMoney(expense.amountCents, currency)}
+            </p>
             {canManage && (
               <div className="flex items-center gap-1">
                 <Link
                   href={`/trips/${tripId}/budget/expenses/${expense.id}/edit`}
                   className={buttonClasses({ variant: "ghost", size: "sm" })}
+                  aria-label={`Editar ${expense.description}`}
                 >
-                  Editar
+                  <Pencil aria-hidden />
                 </Link>
                 <ConfirmAction
                   action={deleteExpenseAction.bind(null, expense.id)}
                   label="Eliminar"
+                  icon={<Trash aria-hidden />}
                   confirmLabel="Sí, eliminar"
                   question="¿Eliminar?"
                   variant="ghost"

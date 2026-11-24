@@ -1,6 +1,7 @@
+import { Plus, SlidersHorizontal } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Card, Skeleton } from "@/components/ui/card";
+import { Card, CardHeading, Skeleton } from "@/components/ui/card";
 import { toActivityOptions } from "@/features/budget/activity-options";
 import { addExpenseAction, updateBudgetSettingsAction } from "@/features/budget/actions";
 import { BudgetSettingsForm } from "@/features/budget/components/budget-settings-form";
@@ -46,22 +47,26 @@ async function Budget({ params }: Pick<Props, "params">) {
     <div className="space-y-8">
       <TripHeader trip={trip} members={members} active="budget" />
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <BudgetSummaryCard summary={summary} currency={trip.currency} memberCount={members.length} />
           <CategoryBreakdown summary={summary} currency={trip.currency} />
           <section aria-labelledby="expenses-title" className="space-y-3">
-            <h2 id="expenses-title" className="font-semibold text-slate-900">
+            <h2 id="expenses-title" className="text-lg font-semibold text-slate-900">
               Gastos estimados ({expenses.length})
             </h2>
             <ExpenseList tripId={trip.id} expenses={expenses} currency={trip.currency} canManage={canManage} />
           </section>
         </div>
 
-        <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           {canManage && (
             <Card className="p-5">
-              <h2 className="mb-4 font-semibold text-slate-900">Agregar gasto</h2>
+              <CardHeading
+                icon={Plus}
+                title="Agregar gasto"
+                description="Montos estimados, para tener una idea del total."
+              />
               <ExpenseForm
                 action={addExpenseAction.bind(null, trip.id)}
                 currency={trip.currency}
@@ -72,7 +77,7 @@ async function Budget({ params }: Pick<Props, "params">) {
           )}
           {hasPermission(role, "trip:edit") && (
             <Card className="p-5">
-              <h2 className="mb-4 font-semibold text-slate-900">Presupuesto y moneda</h2>
+              <CardHeading icon={SlidersHorizontal} tone="slate" title="Presupuesto y moneda" />
               <BudgetSettingsForm
                 action={updateBudgetSettingsAction.bind(null, trip.id)}
                 currency={trip.currency}

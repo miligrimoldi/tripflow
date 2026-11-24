@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,18 +12,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/** Display font for headings: friendly, with personality. */
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: {
     default: "TripFlow · Planificá viajes en grupo",
     template: "%s · TripFlow",
   },
   description:
-    "Organizá viajes con amigos, pareja o familia: itinerario compartido, ideas y actividades en un solo lugar.",
+    "Organizá viajes con amigos, pareja o familia: itinerario compartido, ideas, mapa y presupuesto en un solo lugar.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="es" className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );
