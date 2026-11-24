@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { centsToInput, formatMoney, MAX_AMOUNT_CENTS, parseAmountToCents, splitEvenly } from "./money";
+import {
+  centsToInput,
+  convertCents,
+  currencySymbol,
+  formatMoney,
+  formatRate,
+  MAX_AMOUNT_CENTS,
+  parseAmountToCents,
+  parseRate,
+  splitEvenly,
+} from "./money";
 
 describe("parseAmountToCents", () => {
   it.each([
@@ -52,5 +62,49 @@ describe("splitEvenly", () => {
     expect(splitEvenly(1000, 3)).toEqual([334, 333, 333]);
     expect(splitEvenly(1000, 3).reduce((a, b) => a + b, 0)).toBe(1000);
     expect(splitEvenly(5, 0)).toEqual([]);
+  });
+});
+
+describe("exchange rates", () => {
+  it.each([
+    ["2.099,5", "2099.5"],
+    ["2099.5", "2099.5"],
+    ["1615", "1615"],
+    ["1.615", "1615"], // in Argentina, the dot groups thousands
+    ["1,615.25", "1615.25"],
+    ["269,9577", "269.9577"],
+    ["0,00062", "0.00062"],
+    ["6.4349", "6.4349"],
+    ["1,50", "1.5"],
+    ["$ 1.450", "1450"],
+  ])("parses %j as %s", (input, rate) => {
+    expect(parseRate(input)).toBe(rate);
+  });
+
+  it.each(["", "0", "0,000", "-5", "abc", "1,123456789", "2.0995,5", "9999999999"])("rejects %j", (input) => {
+    expect(parseRate(input)).toBeNull();
+  });
+
+  it("converts exactly, rounding half up to the cent", () => {
+    expect(convertCents(12_000, "2099.5")).toBe(25_194_000); // US$ 120 at tarjeta
+    expect(convertCents(120_000, "269.9577")).toBe(32_394_924); // R$ 1.200 → $ 323.949,24
+    expect(convertCents(100, "0.005")).toBe(1); // 0,5 cents rounds up
+    expect(convertCents(100, "0.004")).toBeNull(); // rounds to nothing
+    // A float would drift here: 10^11 units × 1.1 = 110000000000.00000001…
+    expect(convertCents(10_000_000_000_000 / 2, "1.1")).toBe(5_500_000_000_000);
+  });
+
+  it("formats rates for display and round-trips them", () => {
+    expect(formatRate("2099.5")).toBe("2.099,5");
+    expect(formatRate("1615")).toBe("1.615");
+    expect(formatRate("0.00062")).toBe("0,00062");
+    for (const rate of ["2099.5", "1615", "0.00062", "1234567.891"]) expect(parseRate(formatRate(rate))).toBe(rate);
+  });
+
+  it("knows each currency's symbol", () => {
+    expect(currencySymbol("ARS")).toBe("$");
+    expect(currencySymbol("USD")).toBe("US$");
+    // es-AR shows less common currencies by their code, like formatMoney does.
+    expect(currencySymbol("BRL")).toBe("BRL");
   });
 });
