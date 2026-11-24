@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useFormKey } from "@/lib/use-form-key";
 import { Field, Input, Select } from "@/components/ui/field";
 import { FormAlert } from "@/components/ui/form-alert";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -17,9 +18,11 @@ interface BudgetSettingsFormProps {
 
 export function BudgetSettingsForm({ action, currency, budget }: BudgetSettingsFormProps) {
   const [state, formAction] = useActionState(action, idleState);
+  // Remounted on every response so the currency select shows what was saved.
+  const formKey = useFormKey(state);
 
   return (
-    <form action={formAction} className="@container space-y-4" noValidate>
+    <form key={formKey} action={formAction} className="@container space-y-4" noValidate>
       <FormAlert state={state} />
       <div className="grid gap-4 @md:grid-cols-2">
         <Field label="Presupuesto total (opcional)" error={fieldError(state, "budget")}>
@@ -35,9 +38,9 @@ export function BudgetSettingsForm({ action, currency, budget }: BudgetSettingsF
           )}
         </Field>
         <Field
-          label="Moneda"
+          label="Moneda principal"
           error={fieldError(state, "currency")}
-          hint="Cambiarla no convierte los montos ya cargados."
+          hint="En la que se calculan los totales y las cuentas. Cada gasto se puede cargar en otra moneda. Cambiarla no convierte los montos ya cargados."
         >
           {(props) => (
             <Select {...props} name="currency" defaultValue={submittedValue(state, "currency") ?? currency}>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { FormAlert } from "@/components/ui/form-alert";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { useFormKey } from "@/lib/use-form-key";
 import { fieldError, idleState, submittedValue, type ActionState } from "@/lib/action-state";
 import { ACTIVITY_CATEGORIES, type ActivityDetails } from "@/server/activities/activity";
 import type { Coordinates } from "@/server/shared/coordinates";
@@ -30,18 +31,13 @@ export function ActivityForm({ action, dayOptions, initial, near, submitLabel }:
   const [state, formAction] = useActionState(action, idleState);
   const value = (field: TextField) => submittedValue(state, field) ?? initial?.[field] ?? "";
 
-  // The place field keeps its own state, so it must be remounted to clear it
-  // after a successful submit (the browser only resets uncontrolled inputs).
-  const [placeKey, setPlaceKey] = useState(0);
-  const [lastState, setLastState] = useState(state);
-  if (state !== lastState) {
-    setLastState(state);
-    if (state.status === "success") setPlaceKey((key) => key + 1);
-  }
+  // Remounted on every response: it clears the place field (which keeps its
+  // own state) after a success, and restores the selects after an error.
+  const formKey = useFormKey(state);
   const submittedCoordinates = submittedPoint(submittedValue(state, "latitude"), submittedValue(state, "longitude"));
 
   return (
-    <form action={formAction} className="@container space-y-4" noValidate>
+    <form key={formKey} action={formAction} className="@container space-y-4" noValidate>
       <FormAlert state={state} />
       <Field label="¿Qué quieren hacer?" error={fieldError(state, "title")}>
         {(props) => (
@@ -82,7 +78,6 @@ export function ActivityForm({ action, dayOptions, initial, near, submitLabel }:
         {(props) => (
           <PlaceInput
             {...props}
-            key={placeKey}
             placeholder="Buscá un lugar: Cerro Catedral, Torre Eiffel…"
             defaultLabel={value("location")}
             defaultCoordinates={state.status === "error" ? submittedCoordinates : (initial?.coordinates ?? null)}
