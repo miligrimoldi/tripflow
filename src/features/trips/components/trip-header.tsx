@@ -8,13 +8,14 @@ import { tripLength, type Trip } from "@/server/trips/trip";
 interface TripHeaderProps {
   trip: Trip;
   members: TripMember[];
-  active: "itinerary" | "settings";
+  active: "itinerary" | "map" | "settings";
 }
 
 export function TripHeader({ trip, members, active }: TripHeaderProps) {
   const days = tripLength(trip);
   const tabs = [
     { id: "itinerary", label: "Itinerario", href: `/trips/${trip.id}` },
+    { id: "map", label: "Mapa", href: `/trips/${trip.id}/map` },
     { id: "settings", label: "Grupo y ajustes", href: `/trips/${trip.id}/settings` },
   ] as const;
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { Activity } from "@/server/activities/activity";
@@ -36,6 +37,14 @@ export function ActivityCard({ activity, dayOptions, canManage, dragHandle, clas
               {category.label}
             </span>
             {activity.location && <span>📍 {activity.location}</span>}
+            {activity.coordinates && (
+              <Link
+                href={`/trips/${activity.tripId}/map?focus=${activity.id}`}
+                className="text-brand-700 underline-offset-2 hover:underline"
+              >
+                🗺️ Ver en el mapa
+              </Link>
+            )}
             {activity.url && (
               <a
                 href={activity.url}
