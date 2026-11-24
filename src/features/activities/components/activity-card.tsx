@@ -1,7 +1,9 @@
-import { Clock, Link2, MapPin, Map as MapIcon, Wallet } from "lucide-react";
+import { Clock, Link2, MapPin, Map as MapIcon, Trophy, Wallet } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { IconTile } from "@/components/ui/icon-tile";
+import { ActivityDiscussion } from "@/features/discussions/components/activity-discussion";
+import { NO_DISCUSSION, type DiscussionView } from "@/features/discussions/view";
 import { cn } from "@/lib/cn";
 import type { Activity } from "@/server/activities/activity";
 import { CATEGORY_META } from "../categories";
@@ -14,6 +16,11 @@ interface ActivityCardProps {
   canManage: boolean;
   /** Formatted sum of the costs linked to this activity in the budget. */
   estimatedCost?: string;
+  /** The group's votes and comments. */
+  discussion?: DiscussionView;
+  canDiscuss: boolean;
+  /** The idea the group likes the most. */
+  mostVoted?: boolean;
   /** Optional drag handle rendered at the start of the card. */
   dragHandle?: ReactNode;
   className?: string;
@@ -26,10 +33,14 @@ export function ActivityCard({
   dayOptions,
   canManage,
   estimatedCost,
+  discussion = NO_DISCUSSION,
+  canDiscuss,
+  mostVoted = false,
   dragHandle,
   className,
 }: ActivityCardProps) {
   const category = CATEGORY_META[activity.category];
+  const isIdea = activity.date === null;
 
   return (
     <article
@@ -45,7 +56,15 @@ export function ActivityCard({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="leading-snug font-semibold text-slate-900">{activity.title}</h3>
-              <p className="text-xs text-slate-500">{category.label}</p>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                {category.label}
+                {mostVoted && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">
+                    <Trophy className="size-3" aria-hidden />
+                    La más votada
+                  </span>
+                )}
+              </p>
             </div>
             {activity.startTime && (
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 font-mono text-xs font-semibold text-brand-700 ring-1 ring-brand-100 ring-inset">
@@ -96,6 +115,10 @@ export function ActivityCard({
           <p className="mt-2 text-xs text-slate-400">Agregado por {activity.createdBy.name}</p>
         </div>
       </div>
+      {/* Ideas are where the group decides; a scheduled activity keeps its conversation if it has one. */}
+      {(isIdea || discussion.comments.length > 0) && (
+        <ActivityDiscussion activityId={activity.id} discussion={discussion} votable={isIdea} canDiscuss={canDiscuss} />
+      )}
       {canManage && (
         <ActivityControls
           activityId={activity.id}

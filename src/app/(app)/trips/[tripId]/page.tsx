@@ -7,13 +7,22 @@ import { toBoardSlots } from "@/features/activities/board";
 import { ActivityForm } from "@/features/activities/components/activity-form";
 import { ItineraryBoard } from "@/features/activities/components/itinerary-board";
 import { toDayOptions } from "@/features/activities/day-options";
+import { toDiscussionViews } from "@/features/discussions/view";
 import { TripHeader } from "@/features/trips/components/trip-header";
 import { tripMetadata } from "@/features/trips/metadata";
 import { formatDayLong } from "@/lib/format";
 import { orNotFound } from "@/lib/page-data";
 import { itineraryPoints } from "@/server/activities/activity";
 import { requireUser } from "@/server/auth/session";
-import { activityService, budgetService, membershipService, placeService, tripService } from "@/server/container";
+import {
+  activityService,
+  budgetService,
+  discussionService,
+  membershipService,
+  placeService,
+  tripService,
+} from "@/server/container";
+import { mostVoted } from "@/server/discussions/discussion";
 import { formatMoney } from "@/server/shared/money";
 import { hasPermission } from "@/server/members/member";
 
@@ -32,12 +41,13 @@ export default function TripPage({ params }: PageProps<"/trips/[tripId]">) {
 async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "params">) {
   const { tripId } = await params;
   const user = await requireUser(`/trips/${tripId}`);
-  const [{ trip, role }, itinerary, members, activityCosts] = await orNotFound(
+  const [{ trip, role }, itinerary, members, activityCosts, discussions] = await orNotFound(
     Promise.all([
       tripService.get(user.id, tripId),
       activityService.getItinerary(user.id, tripId),
       membershipService.listMembers(user.id, tripId),
       budgetService.getActivityCosts(user.id, tripId),
+      discussionService.getForTrip(user.id, tripId),
     ]),
   );
   // Formatted on the server so client and server render the same text.
@@ -63,6 +73,12 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
         dayOptions={dayOptions}
         canManage={canManage}
         costs={costs}
+        discussions={toDiscussionViews(discussions)}
+        canDiscuss={hasPermission(role, "activity:discuss")}
+        mostVotedId={mostVoted(
+          itinerary.ideas.map((idea) => idea.id),
+          discussions,
+        )}
         sidebar={
           canManage && (
             <Card className="p-5">
