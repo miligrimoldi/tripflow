@@ -21,7 +21,17 @@ export interface TripMember {
  * instead of hard-coding role checks.
  */
 export type TripPermission =
-  "trip:view" | "trip:edit" | "trip:delete" | "activity:manage" | "expense:manage" | "member:invite" | "member:remove";
+  | "trip:view"
+  | "trip:edit"
+  | "trip:delete"
+  | "activity:manage"
+  /** Vote ideas and comment on activities. */
+  | "activity:discuss"
+  /** Delete other people's comments. */
+  | "comment:moderate"
+  | "expense:manage"
+  | "member:invite"
+  | "member:remove";
 
 const ROLE_PERMISSIONS: Record<MemberRole, ReadonlySet<TripPermission>> = {
   OWNER: new Set<TripPermission>([
@@ -29,11 +39,13 @@ const ROLE_PERMISSIONS: Record<MemberRole, ReadonlySet<TripPermission>> = {
     "trip:edit",
     "trip:delete",
     "activity:manage",
+    "activity:discuss",
+    "comment:moderate",
     "expense:manage",
     "member:invite",
     "member:remove",
   ]),
-  EDITOR: new Set<TripPermission>(["trip:view", "activity:manage", "expense:manage"]),
+  EDITOR: new Set<TripPermission>(["trip:view", "activity:manage", "activity:discuss", "expense:manage"]),
 };
 
 export function hasPermission(role: MemberRole, permission: TripPermission): boolean {
