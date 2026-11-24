@@ -1,4 +1,6 @@
 import type { Activity, Itinerary } from "@/server/activities/activity";
+import type { RouteLeg } from "@/server/routes/directions";
+import type { DayDirections } from "@/server/routes/directions.service";
 import type { Coordinates } from "@/server/shared/coordinates";
 import { CATEGORY_META } from "../activities/categories";
 
@@ -82,4 +84,42 @@ export function buildMapData(itinerary: Itinerary, formatDay: (date: string) => 
 
   const all = [...itinerary.days.flatMap((day) => day.activities), ...itinerary.ideas];
   return { groups, unlocated: all.filter((activity) => !activity.coordinates) };
+}
+
+/** A day's route, ready for the map: a GeoJSON-style line plus each leg's distance and time. */
+export interface MapRoute {
+  stopIds: string[];
+  /** `[longitude, latitude]` pairs (GeoJSON order). */
+  line: [number, number][];
+  legs: RouteLeg[];
+  source: DayDirections["source"];
+}
+
+/** Routes by day ("YYYY-MM-DD"). */
+export type MapRoutes = Record<string, MapRoute>;
+
+export function toMapRoutes(days: DayDirections[]): MapRoutes {
+  return Object.fromEntries(
+    days.map((day) => [
+      day.date,
+      {
+        stopIds: day.stopIds,
+        line: day.path.map((p) => [p.longitude, p.latitude] as [number, number]),
+        legs: day.legs,
+        source: day.source,
+      },
+    ]),
+  );
+}
+
+/**
+ * The route of a day group, only if it goes through exactly the stops shown
+ * (routes load separately, so the day may have changed in between).
+ */
+export function routeForGroup(group: MapGroup, routes: MapRoutes | null): MapRoute | null {
+  const route = routes?.[group.key];
+  if (!route || group.isIdeas) return null;
+  const sameStops =
+    route.stopIds.length === group.points.length && route.stopIds.every((id, i) => id === group.points[i].id);
+  return sameStops ? route : null;
 }

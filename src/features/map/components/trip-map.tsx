@@ -4,20 +4,29 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import type { GeoJSONSource, Map as MapLibreMap, Marker } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
-import type { MapGroup, MapPoint } from "../map-data";
+import { routeForGroup, type MapGroup, type MapPoint, type MapRoutes } from "../map-data";
+import { RoutePanel } from "./route-panel";
 
 /** Free vector tiles from OpenStreetMap data, no API key needed. */
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const ROUTES_SOURCE = "trip-routes";
+const ROAD_LAYER = "trip-routes-roads";
+const STRAIGHT_LAYER = "trip-routes-straight";
 const ALL = "all";
 
 interface TripMapProps {
   groups: MapGroup[];
+  /**
+   * Each day's route along the streets. It is slower than the rest of the
+   * page (it may call a routing API), so it streams in: until it arrives the
+   * map shows straight dashed lines.
+   */
+  routes: Promise<MapRoutes>;
   /** Activity to highlight on load (from "Ver en el mapa"). */
   focusId?: string;
 }
 
-export function TripMap({ groups, focusId }: TripMapProps) {
+export function TripMap({ groups, routes: routesPromise, focusId }: TripMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markers = useRef<Marker[]>([]);
@@ -26,6 +35,19 @@ export function TripMap({ groups, focusId }: TripMapProps) {
   const [selected, setSelected] = useState(
     () => groups.find((g) => g.points.some((p) => p.id === focusId))?.key ?? ALL,
   );
+  const [routes, setRoutes] = useState<MapRoutes | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    routesPromise.then(
+      (loaded) => active && setRoutes(loaded),
+      // Without routes the map still works with straight lines.
+      () => active && setRoutes({}),
+    );
+    return () => {
+      active = false;
+    };
+  }, [routesPromise]);
 
   // Create the map once. maplibre-gl is imported lazily so it is only
   // downloaded on this page (and never evaluated on the server).
@@ -44,10 +66,21 @@ export function TripMap({ groups, focusId }: TripMapProps) {
         map.addControl(new NavigationControl({ showCompass: false }), "top-right");
         map.on("load", () => {
           map!.addSource(ROUTES_SOURCE, { type: "geojson", data: emptyCollection() });
+          // Two layers because a dash pattern can't vary per feature:
+          // solid along the streets, dashed for straight-line approximations.
           map!.addLayer({
-            id: ROUTES_SOURCE,
+            id: ROAD_LAYER,
             type: "line",
             source: ROUTES_SOURCE,
+            filter: ["!", ["get", "dashed"]],
+            paint: { "line-color": ["get", "color"], "line-width": 4, "line-opacity": 0.8 },
+            layout: { "line-cap": "round", "line-join": "round" },
+          });
+          map!.addLayer({
+            id: STRAIGHT_LAYER,
+            type: "line",
+            source: ROUTES_SOURCE,
+            filter: ["get", "dashed"],
             paint: { "line-color": ["get", "color"], "line-width": 3, "line-opacity": 0.7, "line-dasharray": [2, 1.5] },
             layout: { "line-cap": "round", "line-join": "round" },
           });
@@ -97,21 +130,6 @@ export function TripMap({ groups, focusId }: TripMapProps) {
         }
       }
 
-      // Connect each day's stops in visiting order (not for ideas, which have no order).
-      (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData({
-        type: "FeatureCollection",
-        features: visible
-          .filter((group) => !group.isIdeas && group.points.length > 1)
-          .map((group) => ({
-            type: "Feature",
-            properties: { color: group.color },
-            geometry: {
-              type: "LineString",
-              coordinates: group.points.map((p) => [p.coordinates.longitude, p.coordinates.latitude]),
-            },
-          })),
-      });
-
       if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 600 });
     });
 
@@ -119,6 +137,35 @@ export function TripMap({ groups, focusId }: TripMapProps) {
       cancelled = true;
     };
   }, [ready, groups, selected, focusId]);
+
+  // Connect each day's stops in visiting order (not ideas, which have no
+  // order): along the streets when the route is known, straight otherwise.
+  // Separate from the markers so routes arriving later don't move the camera.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    const visible = selected === ALL ? groups : groups.filter((group) => group.key === selected);
+
+    (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData({
+      type: "FeatureCollection",
+      features: visible
+        .filter((group) => !group.isIdeas && group.points.length > 1)
+        .map((group) => {
+          const route = routeForGroup(group, routes);
+          const onRoads = route?.source === "roads";
+          return {
+            type: "Feature",
+            properties: { color: group.color, dashed: !onRoads },
+            geometry: {
+              type: "LineString",
+              coordinates: onRoads
+                ? route.line
+                : group.points.map((p) => [p.coordinates.longitude, p.coordinates.latitude]),
+            },
+          };
+        }),
+    });
+  }, [ready, groups, selected, routes]);
 
   if (failed) {
     return (
@@ -142,18 +189,26 @@ export function TripMap({ groups, focusId }: TripMapProps) {
           </FilterChip>
         ))}
       </div>
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
-        <div ref={container} className="h-[60vh] min-h-80 w-full bg-slate-100" />
-        {!ready && (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">Cargando mapa…</div>
-        )}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
+          <div ref={container} className="h-[60vh] min-h-80 w-full bg-slate-100" />
+          {!ready && (
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">
+              Cargando mapa…
+            </div>
+          )}
+        </div>
+        <RoutePanel
+          groups={groups}
+          selected={selected === ALL ? null : selected}
+          onSelect={setSelected}
+          routes={routes}
+        />
       </div>
-      {selected !== ALL && !groups.find((g) => g.key === selected)?.isIdeas && (
-        <p className="text-xs text-slate-500">
-          La línea punteada une las paradas en el orden del itinerario. Si zigzaguea, usá «Optimizar recorrido» en el
-          itinerario.
-        </p>
-      )}
+      <p className="text-xs text-slate-500">
+        Las paradas se unen en el orden del itinerario. Si el recorrido zigzaguea, usá «Optimizar recorrido» en el
+        itinerario.
+      </p>
     </div>
   );
 }

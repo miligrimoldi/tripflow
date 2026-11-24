@@ -23,3 +23,20 @@ export function savingsRatio(plan: Pick<Plan, "currentCost" | "suggestedCost">):
 export function formatSavings(plan: Pick<Plan, "currentCost" | "suggestedCost">): string {
   return percent.format(savingsRatio(plan));
 }
+
+const distanceKm = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
+
+/** "850 m", "4,2 km", "38 km". */
+export function formatDistance(km: number): string {
+  if (km < 1) return `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m`;
+  return `${km >= 10 ? Math.round(km) : distanceKm.format(km)} km`;
+}
+
+/** "3 min", "45 min", "1 h", "2 h 05 min". Never less than a minute. */
+export function formatDuration(minutes: number): string {
+  const total = Math.max(1, Math.round(minutes));
+  if (total < 60) return `${total} min`;
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  return rest === 0 ? `${hours} h` : `${hours} h ${String(rest).padStart(2, "0")} min`;
+}

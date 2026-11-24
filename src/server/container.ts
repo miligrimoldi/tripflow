@@ -4,6 +4,7 @@ import { ActivityService } from "./activities/activity.service";
 import { BudgetService } from "./budget/budget.service";
 import { env } from "./env";
 import { PhotonPlaceSearch } from "./infrastructure/photon/photon-place-search";
+import { OsrmDirections } from "./infrastructure/routing/osrm-directions";
 import { OsrmTravelCost } from "./infrastructure/routing/osrm-travel-cost";
 import { prisma } from "./infrastructure/prisma/client";
 import { PrismaActivityRepository } from "./infrastructure/prisma/prisma-activity.repository";
@@ -13,6 +14,8 @@ import { PrismaMembershipRepository } from "./infrastructure/prisma/prisma-membe
 import { PrismaTripRepository } from "./infrastructure/prisma/prisma-trip.repository";
 import { MembershipService } from "./members/membership.service";
 import { PlaceService } from "./places/place.service";
+import { FallbackDirections, StraightLineDirections, type DirectionsProvider } from "./routes/directions";
+import { DirectionsService } from "./routes/directions.service";
 import { RouteService } from "./routes/route.service";
 import { FallbackTravelCost, StraightLineTravelCost, type TravelCostProvider } from "./routes/travel-cost";
 import { TripAccessPolicy } from "./members/trip-access";
@@ -60,10 +63,15 @@ export const budgetService = new BudgetService(
 
 export const placeService = new PlaceService(new PhotonPlaceSearch(env.PHOTON_URL));
 
-// Road times when an OSRM server is configured (falling back to straight
-// lines if it fails); straight-line distances otherwise.
+// Roads when an OSRM server is configured (falling back to straight lines if
+// it fails); straight lines otherwise.
 const travelCost: TravelCostProvider = env.ROUTING_URL
   ? new FallbackTravelCost(new OsrmTravelCost(env.ROUTING_URL), new StraightLineTravelCost())
   : new StraightLineTravelCost();
+const directions: DirectionsProvider = env.ROUTING_URL
+  ? new FallbackDirections(new OsrmDirections(env.ROUTING_URL), new StraightLineDirections())
+  : new StraightLineDirections();
 
 export const routeService = new RouteService(activityRepository, tripRepository, travelCost, tripAccess);
+
+export const directionsService = new DirectionsService(activityRepository, tripRepository, directions, tripAccess);
