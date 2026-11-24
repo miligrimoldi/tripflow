@@ -80,9 +80,17 @@ npm run dev                     # http://localhost:3000
 3. Agregar la variable `BETTER_AUTH_SECRET` (`openssl rand -base64 32`).
 4. Opcional: `ROUTING_URL` (por ejemplo `https://router.project-osrm.org`) para recorridos por calle y tiempos en auto.
    Sin ella, el mapa y la optimización usan distancias en línea recta.
-   Opcional: en **Storage → Blob**, crear un Blob store y conectarlo al proyecto (define `BLOB_READ_WRITE_TOKEN`) para
-   poder subir fotos de portada. Sin él, los viajes usan la foto del destino.
-5. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
+5. Opcional, para poder subir fotos de portada (sin esto, los viajes usan la foto del destino): en **Storage → Blob**,
+   crear un Blob store y conectarlo al proyecto. Al crearlo:
+   - Elegir acceso **Public**, no el Private que viene por defecto: las fotos se suben como públicas y se muestran por
+     URL directa, así que un store privado rechaza las subidas.
+   - Marcar **"Add a read-write token env var"**, para que Vercel defina `BLOB_READ_WRITE_TOKEN`.
+
+   Si el store se crea después del último deploy, hay que hacer **Redeploy**: las variables nuevas solo llegan a los
+   deploys nuevos. En desarrollo no hace falta el token: sin él, las fotos se guardan en `public/uploads`. Mejor no
+   copiarlo al `.env` local, para no mezclar fotos de prueba con las de producción.
+
+6. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
 
 `BETTER_AUTH_URL` toma el dominio de producción de Vercel automáticamente; solo hace falta definirla si se usa un
 dominio propio.
