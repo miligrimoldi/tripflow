@@ -9,7 +9,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
 import { formatDateRange } from "@/lib/format";
 import type { TripMember } from "@/server/members/member";
@@ -17,6 +16,9 @@ import { dateOnlyFromDate } from "@/server/shared/date-only";
 import { tripLength, tripTiming, type Trip } from "@/server/trips/trip";
 import { TripTimingChip } from "../trip-visuals";
 import { TripCoverImage } from "./trip-cover-image";
+import { TripLive } from "@/features/realtime/components/trip-live";
+import { getCurrentUser } from "@/server/auth/session";
+import { realtimeService } from "@/server/container";
 
 type Tab = "itinerary" | "today" | "map" | "budget" | "settings";
 
@@ -66,16 +68,7 @@ export function TripHeader({ trip, members, active }: TripHeaderProps) {
             </p>
             {trip.description && <p className="max-w-2xl text-sm text-white/80">{trip.description}</p>}
           </div>
-          <div className="flex -space-x-2" aria-label={`${members.length} integrantes`}>
-            {members.slice(0, 6).map((member) => (
-              <Avatar key={member.userId} name={member.user.name} className="size-9 ring-white/80" />
-            ))}
-            {members.length > 6 && (
-              <span className="inline-flex size-9 items-center justify-center rounded-full bg-white/25 text-xs font-semibold text-white ring-2 ring-white/80 backdrop-blur-sm">
-                +{members.length - 6}
-              </span>
-            )}
-          </div>
+          <LiveMembers tripId={trip.id} members={members} />
         </div>
       </div>
 
@@ -101,5 +94,22 @@ export function TripHeader({ trip, members, active }: TripHeaderProps) {
         ))}
       </nav>
     </header>
+  );
+}
+
+/**
+ * The members' avatars, live: who's online, and the page refreshing when
+ * someone else changes the trip. Every trip page shows the header, so they
+ * all get real time without wiring it page by page.
+ */
+async function LiveMembers({ tripId, members }: { tripId: string; members: TripMember[] }) {
+  const user = await getCurrentUser();
+  return (
+    <TripLive
+      tripId={tripId}
+      currentUserId={user?.id ?? ""}
+      members={members.map((member) => ({ id: member.userId, name: member.user.name }))}
+      enabled={realtimeService.enabled}
+    />
   );
 }
