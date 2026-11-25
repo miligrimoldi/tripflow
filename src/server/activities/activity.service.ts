@@ -1,3 +1,4 @@
+import { noTripEvents, type TripEventPublisher } from "../realtime/trip-events";
 import type { TripAccessPolicy } from "../members/trip-access";
 import type { DateOnly } from "../shared/date-only";
 import { NotFoundError, ValidationError } from "../shared/errors";
@@ -13,6 +14,7 @@ export class ActivityService {
     private readonly activities: ActivityRepository,
     private readonly trips: Pick<TripRepository, "findById">,
     private readonly access: TripAccessPolicy,
+    private readonly events: TripEventPublisher = noTripEvents,
   ) {}
 
   async getItinerary(userId: string, tripId: string): Promise<Itinerary> {
@@ -33,12 +35,14 @@ export class ActivityService {
     const details = parseInput(activityDetailsSchema, input);
     this.assertDateInTrip(details.date, await this.loadTrip(tripId));
 
-    return this.activities.create({
+    const activity = await this.activities.create({
       ...details,
       tripId,
       createdById: userId,
       position: await this.activities.nextPosition(tripId, details.date),
     });
+    await this.events.publish({ tripId, topic: "itinerary", actorId: userId });
+    return activity;
   }
 
   async update(userId: string, activityId: string, input: ActivityDetailsInput): Promise<Activity> {
@@ -50,7 +54,9 @@ export class ActivityService {
       details.date === current.date
         ? current.position
         : await this.activities.nextPosition(current.tripId, details.date);
-    return this.activities.update(activityId, { ...details, position });
+    const activity = await this.activities.update(activityId, { ...details, position });
+    await this.events.publish({ tripId: current.tripId, topic: "itinerary", actorId: userId });
+    return activity;
   }
 
   /**
@@ -68,11 +74,13 @@ export class ActivityService {
       date === current.date ? null : this.slotOrder(current.tripId, date),
     ]);
     await this.activities.saveOrder(planMove({ activityId, from, to: to ?? from, index }));
+    await this.events.publish({ tripId: current.tripId, topic: "itinerary", actorId: userId });
   }
 
   async delete(userId: string, activityId: string): Promise<{ tripId: string }> {
     const current = await this.loadManageable(userId, activityId);
     await this.activities.delete(activityId);
+    await this.events.publish({ tripId: current.tripId, topic: "itinerary", actorId: userId });
     return { tripId: current.tripId };
   }
 

@@ -1,3 +1,4 @@
+import { noTripEvents, type TripEventPublisher } from "../realtime/trip-events";
 import { BusinessRuleError, NotFoundError } from "../shared/errors";
 import type { Clock, TokenGenerator } from "../shared/ports";
 import type { Trip } from "../trips/trip";
@@ -22,6 +23,7 @@ export class MembershipService {
     private readonly access: TripAccessPolicy,
     private readonly tokens: TokenGenerator,
     private readonly clock: Clock,
+    private readonly events: TripEventPublisher = noTripEvents,
   ) {}
 
   async listMembers(userId: string, tripId: string): Promise<TripMember[]> {
@@ -78,6 +80,7 @@ export class MembershipService {
     }
 
     await this.members.add(tripId, userId, "EDITOR");
+    await this.events.publish({ tripId, topic: "members", actorId: userId });
     return { tripId };
   }
 
@@ -89,6 +92,7 @@ export class MembershipService {
       throw new BusinessRuleError("No se puede quitar a quien organiza el viaje");
     }
     await this.members.remove(tripId, memberUserId);
+    await this.events.publish({ tripId, topic: "members", actorId: userId });
   }
 
   async leaveTrip(userId: string, tripId: string): Promise<void> {
@@ -99,5 +103,6 @@ export class MembershipService {
       );
     }
     await this.members.remove(tripId, userId);
+    await this.events.publish({ tripId, topic: "members", actorId: userId });
   }
 }

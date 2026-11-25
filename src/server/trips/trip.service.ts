@@ -1,3 +1,4 @@
+import { noTripEvents, type TripEventPublisher } from "../realtime/trip-events";
 import type { ActivityRepository } from "../activities/activity.repository";
 import type { CoverService } from "../covers/cover.service";
 import type { MemberRole } from "../members/member";
@@ -20,6 +21,7 @@ export class TripService {
     private readonly activities: Pick<ActivityRepository, "unscheduleOutsideRange">,
     private readonly covers: Pick<CoverService, "discard">,
     private readonly access: TripAccessPolicy,
+    private readonly events: TripEventPublisher = noTripEvents,
   ) {}
 
   listForUser(userId: string): Promise<TripSummary[]> {
@@ -46,6 +48,7 @@ export class TripService {
     // Shortening a trip must not lose plans: activities on removed days go
     // back to the ideas board.
     await this.activities.unscheduleOutsideRange(tripId, trip.startDate, trip.endDate);
+    await this.events.publish({ tripId, topic: "trip", actorId: userId });
     return trip;
   }
 
@@ -55,5 +58,7 @@ export class TripService {
     await this.trips.delete(tripId);
     // Its uploaded photo would otherwise stay in storage forever.
     await this.covers.discard(trip?.coverImageUrl ?? null);
+    // Whoever is looking at it gets sent away (the trip no longer exists).
+    await this.events.publish({ tripId, topic: "trip", actorId: userId });
   }
 }

@@ -1,3 +1,4 @@
+import { noTripEvents, type TripEventPublisher } from "../realtime/trip-events";
 import type { MembershipRepository } from "../members/member.repository";
 import type { TripAccessPolicy } from "../members/trip-access";
 import { NotFoundError, ValidationError } from "../shared/errors";
@@ -23,6 +24,7 @@ export class SettleUpService {
     private readonly settlements: SettlementRepository,
     private readonly members: Pick<MembershipRepository, "listByTrip">,
     private readonly access: TripAccessPolicy,
+    private readonly events: TripEventPublisher = noTripEvents,
   ) {}
 
   async getOverview(userId: string, tripId: string): Promise<SettleUpOverview> {
@@ -45,7 +47,9 @@ export class SettleUpService {
     if (!members.has(fromId) || !members.has(toId)) {
       throw new ValidationError("Elegí personas del viaje", { _form: ["Elegí personas del viaje"] });
     }
-    return this.settlements.create({ tripId, fromId, toId, amountCents, createdById: userId });
+    const settlement = await this.settlements.create({ tripId, fromId, toId, amountCents, createdById: userId });
+    await this.events.publish({ tripId, topic: "budget", actorId: userId });
+    return settlement;
   }
 
   /** Undoes a payment recorded by mistake. */
@@ -54,5 +58,6 @@ export class SettleUpService {
     if (!settlement) throw new NotFoundError("Pago");
     await this.access.require(settlement.tripId, userId, "expense:manage");
     await this.settlements.delete(settlementId);
+    await this.events.publish({ tripId: settlement.tripId, topic: "budget", actorId: userId });
   }
 }
