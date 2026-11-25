@@ -1,5 +1,5 @@
 import "server-only";
-import * as Ably from "ably";
+import { createHttpClient, type PubSubHttpClient, type TokenRequest } from "@ably/pubsub-server";
 import {
   tripChannel,
   type RealtimeTokenIssuer,
@@ -12,14 +12,17 @@ const TOKEN_TTL_MS = 60 * 60 * 1000;
 
 /**
  * Real time over Ably (managed WebSockets). The server publishes through
- * its REST API, so it works from serverless functions; browsers hold the
+ * its HTTP API, so it works from serverless functions; browsers hold the
  * WebSocket connections, authenticated with tokens limited to one trip.
+ *
+ * Uses Ably's server SDK: it declares this traffic as the server's (not an
+ * end user's), which accounts billed by monthly active users require.
  */
 export class AblyRealtime implements TripEventPublisher, RealtimeTokenIssuer {
-  private readonly client: Ably.Rest;
+  private readonly client: PubSubHttpClient;
 
   constructor(apiKey: string) {
-    this.client = new Ably.Rest({ key: apiKey });
+    this.client = createHttpClient({ key: apiKey });
   }
 
   async publish({ tripId, topic, actorId }: TripEvent): Promise<void> {
@@ -36,7 +39,7 @@ export class AblyRealtime implements TripEventPublisher, RealtimeTokenIssuer {
    * (to listen and to show presence, never to publish) and bound to the
    * user's id, so presence tells who is connected.
    */
-  tokenFor(userId: string, tripId: string): Promise<Ably.TokenRequest> {
+  tokenFor(userId: string, tripId: string): Promise<TokenRequest> {
     return this.client.auth.createTokenRequest({
       clientId: userId,
       capability: { [tripChannel(tripId)]: ["subscribe", "presence"] },

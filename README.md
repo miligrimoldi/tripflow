@@ -206,8 +206,9 @@ src/
   con tu identidad de Google. Es el comportamiento seguro por defecto de Better Auth, y la app lo explica con un
   mensaje claro.
 - **Tiempo real con WebSockets en un deploy serverless.** Vercel no puede mantener conexiones WebSocket abiertas, así
-  que las sostiene Ably: el servidor publica por su API REST (funciona desde funciones serverless) y los navegadores
-  escuchan por WebSocket. Los casos de uso publican un evento de dominio después de guardar cada cambio, a través de un
+  que las sostiene Ably: el servidor publica por su API HTTP (funciona desde funciones serverless) con el SDK de
+  servidor (`@ably/pubsub-server`) y los navegadores escuchan por WebSocket con el SDK de dispositivo
+  (`@ably/pubsub-device`). Los casos de uso publican un evento de dominio después de guardar cada cambio, a través de un
   puerto `TripEventPublisher` (con Ably o sin tiempo real), y un fallo al publicar nunca rompe la acción. El evento no
   lleva datos, solo qué parte cambió y quién: el navegador vuelve a pedir la página (`router.refresh()`), así los
   permisos y el formato siguen saliendo del servidor y no hay dos formas de dibujar lo mismo. Cada navegador se conecta
