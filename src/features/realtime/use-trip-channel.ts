@@ -30,10 +30,12 @@ export function useTripChannel({ tripId, enabled, onEvent }: TripChannelOptions)
     let cancelled = false;
     let close: (() => void) | undefined;
 
-    import("ably")
-      .then((Ably) => {
+    // Ably's device SDK: the browser is an end user's device (its token
+    // carries the user's id, as accounts billed by active users require).
+    import("@ably/pubsub-device")
+      .then(({ createClient }) => {
         if (cancelled) return;
-        const client = new Ably.Realtime({
+        const client = createClient({
           authUrl: `/api/realtime/token?tripId=${encodeURIComponent(tripId)}`,
           closeOnUnload: true,
         });
