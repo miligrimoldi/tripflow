@@ -18,15 +18,26 @@ interface DayRouteOptimizerProps {
   date: string;
   /** Show the button (only for members who can reorder, on days worth optimizing). */
   enabled: boolean;
-  /** The day's title, rendered in the same row as the button. */
-  heading: ReactNode;
+  /**
+   * Renders the day's header with the "Optimizar recorrido" button (or `null`
+   * when it doesn't apply) wherever it fits: next to a title, over a photo…
+   */
+  header: (button: ReactNode) => ReactNode;
+  /** `light` for the button over a photo or dark background. */
+  buttonVariant?: "secondary" | "light";
 }
 
 /**
  * "Optimizar recorrido" for one day: asks the server for a shorter order,
  * shows it with the distance saved, and applies it only if the user agrees.
  */
-export function DayRouteOptimizer({ tripId, date, enabled, heading }: DayRouteOptimizerProps) {
+export function DayRouteOptimizer({
+  tripId,
+  date,
+  enabled,
+  header,
+  buttonVariant = "secondary",
+}: DayRouteOptimizerProps) {
   const [panel, setPanel] = useState<PanelState>({ kind: "closed" });
   const [calculating, startCalculating] = useTransition();
   const [applying, startApplying] = useTransition();
@@ -62,13 +73,12 @@ export function DayRouteOptimizer({ tripId, date, enabled, heading }: DayRouteOp
 
   return (
     <div className="mb-3 space-y-3">
-      <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        {heading}
-        {enabled && (
+      {header(
+        enabled ? (
           <Button
             type="button"
             size="sm"
-            variant="secondary"
+            variant={buttonVariant}
             onClick={suggest}
             disabled={calculating}
             aria-expanded={panel.kind !== "closed"}
@@ -76,8 +86,8 @@ export function DayRouteOptimizer({ tripId, date, enabled, heading }: DayRouteOp
             {calculating ? <LoaderCircle className="animate-spin" aria-hidden /> : <Route aria-hidden />}
             {calculating ? "Calculando…" : "Optimizar recorrido"}
           </Button>
-        )}
-      </div>
+        ) : null,
+      )}
 
       {panel.kind === "message" && (
         <div

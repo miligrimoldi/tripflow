@@ -41,6 +41,23 @@ describe("ActivityPhotoService", () => {
     expect(await new ActivityPhotoService(source("Ernestina Pais")).photoFor(activity("Desayuno"), "X")).toBeNull();
   });
 
+  it("collects the reliable photos of several activities by id", async () => {
+    const byQuery: DestinationPhotoSource = {
+      find: async (query) =>
+        query.startsWith("Museo")
+          ? { url: "https://photos.test/museo.jpg", title: "Museo de la Patagonia", creditUrl: "x" }
+          : { url: "https://photos.test/other.jpg", title: "Ernestina Pais", creditUrl: "x" },
+    };
+    const photos = await new ActivityPhotoService(byQuery).photosFor(
+      [
+        { id: "a", title: "Museo de la Patagonia", location: null },
+        { id: "b", title: "Desayuno", location: null },
+      ],
+      "Bariloche",
+    );
+    expect(photos).toEqual({ a: "https://photos.test/museo.jpg" });
+  });
+
   it("returns no photo when the source fails", async () => {
     const failing: DestinationPhotoSource = {
       find: async () => {

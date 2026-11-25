@@ -15,7 +15,7 @@ import { tripMetadata } from "@/features/trips/metadata";
 import { cn } from "@/lib/cn";
 import { formatDayLong, formatDayShort } from "@/lib/format";
 import { orNotFound } from "@/lib/page-data";
-import { itineraryPoints, type Activity } from "@/server/activities/activity";
+import { itineraryPoints } from "@/server/activities/activity";
 import { requireUser } from "@/server/auth/session";
 import {
   activityPhotoService,
@@ -65,7 +65,7 @@ async function Today({ params, searchParams }: Props) {
 
   const [directions, photos] = await Promise.all([
     directionsService.getDayDirections(user.id, tripId, date),
-    dayPhotos(day.activities, trip.destination),
+    activityPhotoService.photosFor(day.activities, trip.destination),
   ]);
   const entries = buildDayPlan(day.activities, directions, photos);
   const dayMap = buildMapData({ days: [day], ideas: [] }, formatDayShort).groups;
@@ -117,19 +117,6 @@ async function Today({ params, searchParams }: Props) {
       )}
     </div>
   );
-}
-
-/**
- * Photo of each activity that has a reliable one. One lookup at a time, as
- * Wikipedia's API etiquette asks (they're cached, so it's slow only once).
- */
-async function dayPhotos(activities: Activity[], destination: string): Promise<Map<string, string>> {
-  const photos = new Map<string, string>();
-  for (const activity of activities) {
-    const photo = await activityPhotoService.photoFor(activity, destination);
-    if (photo) photos.set(activity.id, photo.url);
-  }
-  return photos;
 }
 
 function DayLink({
