@@ -28,6 +28,11 @@ const envSchema = z.object({
    */
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  /**
+   * Ably API key, for real-time updates between members of a trip. Optional:
+   * without it, changes appear when the page is reloaded.
+   */
+  ABLY_API_KEY: z.string().min(1).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

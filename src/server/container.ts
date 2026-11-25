@@ -1,6 +1,9 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { ActivityService } from "./activities/activity.service";
+import { AblyRealtime } from "./infrastructure/ably/ably-realtime";
+import { RealtimeService } from "./realtime/realtime.service";
+import { noTripEvents, type TripEventPublisher } from "./realtime/trip-events";
 import { BudgetService } from "./budget/budget.service";
 import { SettleUpService } from "./budget/settle-up.service";
 import { ActivityPhotoService } from "./covers/activity-photo";
@@ -55,6 +58,12 @@ const expenseRepository = new PrismaExpenseRepository(prisma);
 
 const tripAccess = new TripAccessPolicy(membershipRepository);
 
+// Real time over Ably when configured; otherwise changes show up on reload.
+const ably = env.ABLY_API_KEY ? new AblyRealtime(env.ABLY_API_KEY) : null;
+const tripEvents: TripEventPublisher = ably ?? noTripEvents;
+
+export const realtimeService = new RealtimeService(ably, tripAccess);
+
 // Vercel Blob when configured; the local disk only in development.
 const imageStorage: ImageStorage | null = env.BLOB_READ_WRITE_TOKEN
   ? new VercelBlobImageStorage()
@@ -64,15 +73,15 @@ const imageStorage: ImageStorage | null = env.BLOB_READ_WRITE_TOKEN
 
 const wikipediaPhotos = new WikipediaDestinationPhotos();
 
-export const coverService = new CoverService(tripRepository, wikipediaPhotos, imageStorage, tripAccess);
+export const coverService = new CoverService(tripRepository, wikipediaPhotos, imageStorage, tripAccess, tripEvents);
 
 export const activityPhotoService = new ActivityPhotoService(wikipediaPhotos);
 
 export const weatherService = new WeatherService(new OpenMeteoWeather());
 
-export const tripService = new TripService(tripRepository, activityRepository, coverService, tripAccess);
+export const tripService = new TripService(tripRepository, activityRepository, coverService, tripAccess, tripEvents);
 
-export const activityService = new ActivityService(activityRepository, tripRepository, tripAccess);
+export const activityService = new ActivityService(activityRepository, tripRepository, tripAccess, tripEvents);
 
 export const membershipService = new MembershipService(
   membershipRepository,
@@ -81,6 +90,7 @@ export const membershipService = new MembershipService(
   tripAccess,
   secureTokens,
   systemClock,
+  tripEvents,
 );
 
 export const budgetService = new BudgetService(
@@ -89,12 +99,14 @@ export const budgetService = new BudgetService(
   activityRepository,
   membershipRepository,
   tripAccess,
+  tripEvents,
 );
 
 export const discussionService = new DiscussionService(
   new PrismaDiscussionRepository(prisma),
   activityRepository,
   tripAccess,
+  tripEvents,
 );
 
 export const settleUpService = new SettleUpService(
@@ -102,6 +114,7 @@ export const settleUpService = new SettleUpService(
   new PrismaSettlementRepository(prisma),
   membershipRepository,
   tripAccess,
+  tripEvents,
 );
 
 // DolarApi first: for anything involving pesos it has every dollar rate.
@@ -121,6 +134,6 @@ const directions: DirectionsProvider = env.ROUTING_URL
   ? new FallbackDirections(new OsrmDirections(env.ROUTING_URL), new StraightLineDirections())
   : new StraightLineDirections();
 
-export const routeService = new RouteService(activityRepository, tripRepository, travelCost, tripAccess);
+export const routeService = new RouteService(activityRepository, tripRepository, travelCost, tripAccess, tripEvents);
 
 export const directionsService = new DirectionsService(activityRepository, tripRepository, directions, tripAccess);

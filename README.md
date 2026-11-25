@@ -14,6 +14,9 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
   tiene y cuánto recorrido; las actividades muestran una miniatura del lugar cuando hay una foto confiable.
 - **Vista calendario**: todo el viaje de un vistazo, con una columna por día y las actividades como bloques en su
   horario, de colores según la categoría. Durante el viaje marca el día de hoy y la hora actual.
+- **Tiempo real**: si otra persona del grupo cambia algo (mueve una actividad, carga un gasto, comenta), la página se
+  actualiza sola y avisa quién fue ("Bruno actualizó el itinerario"). Los avatares muestran quién está viendo el viaje
+  en ese momento.
 - **Tablero de ideas**: actividades sin día asignado (restaurantes, excursiones, lugares…) que después se mueven a un día.
 - **Votos y comentarios**: cada integrante marca las ideas que le interesan y el grupo las comenta ("¿reservamos?",
   "cierra los lunes"). La idea que claramente lidera se destaca; al pasar a un día, la conversación se conserva.
@@ -107,7 +110,9 @@ npm run dev                     # http://localhost:3000
    crear un ID de cliente OAuth de tipo "Aplicación web" con el URI de redirección
    `https://<tu-dominio>/api/auth/callback/google` (y `http://localhost:3000/api/auth/callback/google` para desarrollo),
    y cargar `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Sin ellas, el botón no aparece.
-7. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
+7. Opcional, para **tiempo real**: crear una app en [Ably](https://ably.com) (plan gratis) y cargar su API key en
+   `ABLY_API_KEY`. Sin ella, los cambios de los demás se ven al recargar.
+8. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
 
 `BETTER_AUTH_URL` toma el dominio de producción de Vercel automáticamente; solo hace falta definirla si se usa un
 dominio propio.
@@ -200,6 +205,14 @@ src/
   contraseña. Unirlas automáticamente permitiría que otra persona se registre primero con tu email y después se quede
   con tu identidad de Google. Es el comportamiento seguro por defecto de Better Auth, y la app lo explica con un
   mensaje claro.
+- **Tiempo real con WebSockets en un deploy serverless.** Vercel no puede mantener conexiones WebSocket abiertas, así
+  que las sostiene Ably: el servidor publica por su API REST (funciona desde funciones serverless) y los navegadores
+  escuchan por WebSocket. Los casos de uso publican un evento de dominio después de guardar cada cambio, a través de un
+  puerto `TripEventPublisher` (con Ably o sin tiempo real), y un fallo al publicar nunca rompe la acción. El evento no
+  lleva datos, solo qué parte cambió y quién: el navegador vuelve a pedir la página (`router.refresh()`), así los
+  permisos y el formato siguen saliendo del servidor y no hay dos formas de dibujar lo mismo. Cada navegador se conecta
+  con un token que el servidor emite solo a integrantes del viaje, limitado al canal de ese viaje y a escuchar y
+  presencia (nunca publicar).
 - **Votos idempotentes.** El caso de uso es `setVote(voted: true | false)` y no "toggle": un doble clic o un reintento
   no puede deshacer el voto. En la base, la clave primaria compuesta `(activityId, userId)` impide votar dos veces
   aunque lleguen dos requests a la vez. En la UI el voto se ve al instante (`useOptimistic`) y se confirma con el
@@ -266,12 +279,13 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
   WMO y respuesta de Open-Meteo), zona horaria cerca de la medianoche y qué fotos de actividades son confiables.
 - Calendario: duraciones estimadas y recortadas, bloques superpuestos lado a lado, reutilización de columnas y rango de
   horas.
+- Tiempo real: qué casos de uso anuncian cambios (y que los rechazados no), tokens solo para integrantes y validación de
+  los eventos que llegan por la red.
 - Lugares y mapa: coordenadas válidas (ambas o ninguna, rangos), parseo de respuestas de Photon, sesgo por zona del
   viaje y armado de las capas del mapa por día.
 
 ## Próximos pasos
 
 - Tests de integración de los repositorios contra un Postgres efímero (Testcontainers) y tests E2E con Playwright.
-- Actualización en tiempo real (SSE o WebSockets) cuando otra persona edita el viaje.
 - Verificación de email y recuperación de contraseña (con email verificado, también se podría unir la cuenta de Google
   a una existente).

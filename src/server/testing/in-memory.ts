@@ -31,6 +31,7 @@ import type { BudgetSettings, Trip, TripDetails, TripSummary } from "../trips/tr
 import type { TripRepository } from "../trips/trip.repository";
 import { StraightLineDirections } from "../routes/directions";
 import { DirectionsService } from "../routes/directions.service";
+import type { TripEvent, TripEventPublisher } from "../realtime/trip-events";
 import { RouteService } from "../routes/route.service";
 import { StraightLineTravelCost } from "../routes/travel-cost";
 import { TripService } from "../trips/trip.service";
@@ -313,6 +314,15 @@ export class FakeDestinationPhotos implements DestinationPhotoSource {
   }
 }
 
+/** Remembers every event published, so tests can check what was announced. */
+export class RecordingTripEvents implements TripEventPublisher {
+  published: TripEvent[] = [];
+
+  async publish(event: TripEvent) {
+    this.published.push(event);
+  }
+}
+
 export class FakeClock implements Clock {
   constructor(private current = new Date("2026-01-01T12:00:00Z")) {}
 
@@ -432,7 +442,8 @@ export function createTestApp() {
   const clock = new FakeClock();
   const storage = new FakeImageStorage();
   const destinationPhotos = new FakeDestinationPhotos();
-  const coverService = new CoverService(trips, destinationPhotos, storage, access);
+  const events = new RecordingTripEvents();
+  const coverService = new CoverService(trips, destinationPhotos, storage, access, events);
 
   return {
     db,
@@ -440,15 +451,24 @@ export function createTestApp() {
     repositories: { trips, members, invitations, activities, expenses, discussions, settlements },
     storage,
     destinationPhotos,
+    events,
     coverService,
-    tripService: new TripService(trips, activities, coverService, access),
-    activityService: new ActivityService(activities, trips, access),
-    discussionService: new DiscussionService(discussions, activities, access),
-    budgetService: new BudgetService(expenses, trips, activities, members, access),
-    settleUpService: new SettleUpService(expenses, settlements, members, access),
-    routeService: new RouteService(activities, trips, new StraightLineTravelCost(), access),
+    tripService: new TripService(trips, activities, coverService, access, events),
+    activityService: new ActivityService(activities, trips, access, events),
+    discussionService: new DiscussionService(discussions, activities, access, events),
+    budgetService: new BudgetService(expenses, trips, activities, members, access, events),
+    settleUpService: new SettleUpService(expenses, settlements, members, access, events),
+    routeService: new RouteService(activities, trips, new StraightLineTravelCost(), access, events),
     directionsService: new DirectionsService(activities, trips, new StraightLineDirections(), access),
-    membershipService: new MembershipService(members, invitations, trips, access, new SequentialTokens(), clock),
+    membershipService: new MembershipService(
+      members,
+      invitations,
+      trips,
+      access,
+      new SequentialTokens(),
+      clock,
+      events,
+    ),
     addUser: (name: string) => db.addUser(name),
   };
 }

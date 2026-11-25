@@ -1,3 +1,4 @@
+import { noTripEvents, type TripEventPublisher } from "../realtime/trip-events";
 import type { Activity } from "../activities/activity";
 import type { ActivityRepository } from "../activities/activity.repository";
 import { hasPermission } from "../members/member";
@@ -17,6 +18,7 @@ export class DiscussionService {
     private readonly discussions: DiscussionRepository,
     private readonly activities: Pick<ActivityRepository, "findById">,
     private readonly access: TripAccessPolicy,
+    private readonly events: TripEventPublisher = noTripEvents,
   ) {}
 
   /** Votes and comments of the trip's activities, by activity id. */
@@ -45,12 +47,15 @@ export class DiscussionService {
     }
     if (voted) await this.discussions.addVote(activityId, userId);
     else await this.discussions.removeVote(activityId, userId);
+    await this.events.publish({ tripId: activity.tripId, topic: "discussion", actorId: userId });
   }
 
   async addComment(userId: string, activityId: string, input: CommentInput): Promise<Comment> {
-    await this.loadActivity(userId, activityId);
+    const activity = await this.loadActivity(userId, activityId);
     const { body } = parseInput(commentSchema, input);
-    return this.discussions.addComment({ activityId, authorId: userId, body });
+    const comment = await this.discussions.addComment({ activityId, authorId: userId, body });
+    await this.events.publish({ tripId: activity.tripId, topic: "discussion", actorId: userId });
+    return comment;
   }
 
   /** Authors delete their own comments; the organizer can delete any. */
@@ -65,6 +70,7 @@ export class DiscussionService {
       throw new ForbiddenError();
     }
     await this.discussions.deleteComment(commentId);
+    await this.events.publish({ tripId: activity.tripId, topic: "discussion", actorId: userId });
   }
 
   private async loadActivity(userId: string, activityId: string): Promise<Activity> {

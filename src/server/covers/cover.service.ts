@@ -1,3 +1,4 @@
+import { noTripEvents, type TripEventPublisher } from "../realtime/trip-events";
 import type { TripAccessPolicy } from "../members/trip-access";
 import { NotFoundError, ValidationError } from "../shared/errors";
 import type { Trip } from "../trips/trip";
@@ -18,6 +19,7 @@ export class CoverService {
     /** `null` when no storage is configured: uploads are disabled. */
     private readonly storage: ImageStorage | null,
     private readonly access: TripAccessPolicy,
+    private readonly events: TripEventPublisher = noTripEvents,
   ) {}
 
   get uploadsEnabled(): boolean {
@@ -53,6 +55,7 @@ export class CoverService {
     const url = await storage.save(`covers/${tripId}.${COVER_TYPES[type]}`, file.bytes, type);
     const updated = await this.trips.updateCover(tripId, url);
     await this.discard(trip.coverImageUrl);
+    await this.events.publish({ tripId, topic: "trip", actorId: userId });
     return updated;
   }
 
@@ -61,6 +64,7 @@ export class CoverService {
     const trip = await this.loadEditable(userId, tripId);
     const updated = await this.trips.updateCover(tripId, null);
     await this.discard(trip.coverImageUrl);
+    await this.events.publish({ tripId, topic: "trip", actorId: userId });
     return updated;
   }
 

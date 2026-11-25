@@ -1,3 +1,4 @@
+import { noTripEvents, type TripEventPublisher } from "../realtime/trip-events";
 import type { ActivityRepository } from "../activities/activity.repository";
 import type { MembershipRepository } from "../members/member.repository";
 import type { TripAccessPolicy } from "../members/trip-access";
@@ -29,6 +30,7 @@ export class BudgetService {
     private readonly activities: Pick<ActivityRepository, "findById">,
     private readonly members: Pick<MembershipRepository, "listByTrip">,
     private readonly access: TripAccessPolicy,
+    private readonly events: TripEventPublisher = noTripEvents,
   ) {}
 
   async getOverview(userId: string, tripId: string): Promise<BudgetOverview> {
@@ -57,25 +59,32 @@ export class BudgetService {
   async addExpense(userId: string, tripId: string, input: ExpenseInput): Promise<Expense> {
     await this.access.require(tripId, userId, "expense:manage");
     const details = await this.toDetails(input, tripId);
-    return this.expenses.create({ ...details, tripId, createdById: userId });
+    const expense = await this.expenses.create({ ...details, tripId, createdById: userId });
+    await this.events.publish({ tripId, topic: "budget", actorId: userId });
+    return expense;
   }
 
   async updateExpense(userId: string, expenseId: string, input: ExpenseInput): Promise<Expense> {
     const current = await this.loadManageable(userId, expenseId);
     const details = await this.toDetails(input, current.tripId);
-    return this.expenses.update(expenseId, details);
+    const expense = await this.expenses.update(expenseId, details);
+    await this.events.publish({ tripId: current.tripId, topic: "budget", actorId: userId });
+    return expense;
   }
 
   async deleteExpense(userId: string, expenseId: string): Promise<{ tripId: string }> {
     const current = await this.loadManageable(userId, expenseId);
     await this.expenses.delete(expenseId);
+    await this.events.publish({ tripId: current.tripId, topic: "budget", actorId: userId });
     return { tripId: current.tripId };
   }
 
   /** Currency and total budget are trip settings: only the organizer changes them. */
   async updateSettings(userId: string, tripId: string, input: BudgetSettingsInput): Promise<Trip> {
     await this.access.require(tripId, userId, "trip:edit");
-    return this.trips.updateBudgetSettings(tripId, parseInput(budgetSettingsSchema, input));
+    const trip = await this.trips.updateBudgetSettings(tripId, parseInput(budgetSettingsSchema, input));
+    await this.events.publish({ tripId, topic: "budget", actorId: userId });
+    return trip;
   }
 
   private async loadManageable(userId: string, expenseId: string): Promise<Expense> {

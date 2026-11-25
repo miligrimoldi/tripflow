@@ -1,3 +1,4 @@
+import { noTripEvents, type TripEventPublisher } from "../realtime/trip-events";
 import { z } from "zod";
 import type { ActivityRepository } from "../activities/activity.repository";
 import type { TripAccessPolicy } from "../members/trip-access";
@@ -47,6 +48,7 @@ export class RouteService {
     private readonly trips: Pick<TripRepository, "findById">,
     private readonly travel: TravelCostProvider,
     private readonly access: TripAccessPolicy,
+    private readonly events: TripEventPublisher = noTripEvents,
   ) {}
 
   /** Suggests a shorter order for one day. Nothing is saved until {@link applyDayRoute}. */
@@ -98,6 +100,7 @@ export class RouteService {
       throw new BusinessRuleError("El día cambió mientras tanto. Volvé a calcular el recorrido.");
     }
     await this.activities.saveOrder([{ date, activityIds: order }]);
+    await this.events.publish({ tripId, topic: "itinerary", actorId: userId });
   }
 
   private async authorize(userId: string, tripId: string, date: string): Promise<void> {
