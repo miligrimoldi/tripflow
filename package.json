@@ -21,13 +21,14 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ably/pubsub-device": "3.0.0",
+    "@ably/pubsub-server": "3.0.0",
     "@dnd-kit/abstract": "^0.5.3",
     "@dnd-kit/helpers": "^0.5.3",
     "@dnd-kit/react": "^0.5.3",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@vercel/blob": "2.8.2",
-    "ably": "2.30.0",
     "better-auth": "^1.7.27",
     "lucide-react": "^1.78.0",
     "maplibre-gl": "^6.19.0",
