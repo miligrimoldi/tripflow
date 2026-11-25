@@ -31,6 +31,14 @@ export function formatDayShort(date: DateOnly): string {
   return shortDate.format(dateOnlyToDate(date));
 }
 
+const weekdayShort = new Intl.DateTimeFormat("es-AR", { weekday: "short", timeZone: "UTC" });
+
+/** "Sáb", for compact day headers. */
+export function formatWeekdayShort(date: DateOnly): string {
+  const text = weekdayShort.format(dateOnlyToDate(date)).replace(".", "");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export function formatDateRange(start: DateOnly, end: DateOnly): string {
   if (start === end) return shortDateWithYear.format(dateOnlyToDate(start));
   return `${shortDate.format(dateOnlyToDate(start))} – ${shortDateWithYear.format(dateOnlyToDate(end))}`;

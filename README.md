@@ -12,6 +12,8 @@ viaje en un solo lugar, en vez de tener la información repartida entre WhatsApp
   (Espacio + flechas). Los cambios se ven al instante y, si no se pueden guardar, se revierten.
 - **Itinerario con fotos**: cada día abre con una foto de su lugar más representativo, su fecha, cuántas actividades
   tiene y cuánto recorrido; las actividades muestran una miniatura del lugar cuando hay una foto confiable.
+- **Vista calendario**: todo el viaje de un vistazo, con una columna por día y las actividades como bloques en su
+  horario, de colores según la categoría. Durante el viaje marca el día de hoy y la hora actual.
 - **Tablero de ideas**: actividades sin día asignado (restaurantes, excursiones, lugares…) que después se mueven a un día.
 - **Votos y comentarios**: cada integrante marca las ideas que le interesan y el grupo las comenta ("¿reservamos?",
   "cierra los lunes"). La idea que claramente lidera se destaca; al pasar a un día, la conversación se conserva.
@@ -178,6 +180,10 @@ src/
   puede tardar unos segundos (las búsquedas en Wikipedia van de a una, como pide su API). Por eso el server component
   pasa las promesas sin esperarlas: el itinerario aparece enseguida y las fotos se suman con un fundido cuando llegan
   (`useResolved`, que a diferencia de `use()` no suspende). Después quedan cacheadas por semanas.
+- **Calendario sin hora de fin.** Las actividades solo tienen hora de inicio, así que cada bloque dura lo que suele durar
+  su categoría (una comida 1 h 30, una excursión 4 h) y se corta si la siguiente empieza antes. Las que igual se
+  superponen (por ejemplo, a la misma hora) se reparten el ancho lado a lado, con particionado greedy de intervalos
+  como en una app de calendario. Es una función pura con tests (`layoutDay`).
 - **Vista "Hoy".** El "ahora" se calcula en la zona horaria del destino, que viene con el pronóstico de Open-Meteo
   (gratis, sin API key): si el servidor corre en UTC o quien mira está en otro país, igual ve la hora de Bariloche. El
   cliente lee la hora con `useSyncExternalStore` (en el servidor es `null`), así no hay diferencias de hidratación y se
@@ -249,6 +255,8 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
   actividades sin ubicación fijas, respuesta de OSRM y fallback, y que no se aplique una sugerencia desactualizada.
 - Vista "Hoy": día por defecto, qué ya pasó y dónde va el "ahora", tramos solo entre paradas consecutivas, clima (códigos
   WMO y respuesta de Open-Meteo), zona horaria cerca de la medianoche y qué fotos de actividades son confiables.
+- Calendario: duraciones estimadas y recortadas, bloques superpuestos lado a lado, reutilización de columnas y rango de
+  horas.
 - Lugares y mapa: coordenadas válidas (ambas o ninguna, rangos), parseo de respuestas de Photon, sesgo por zona del
   viaje y armado de las capas del mapa por día.
 

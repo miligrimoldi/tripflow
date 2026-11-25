@@ -6,12 +6,14 @@ import { createActivityAction } from "@/features/activities/actions";
 import { toBoardSlots } from "@/features/activities/board";
 import { ActivityForm } from "@/features/activities/components/activity-form";
 import { ItineraryBoard } from "@/features/activities/components/itinerary-board";
+import { ViewToggle } from "@/features/activities/components/view-toggle";
 import { toDayOptions } from "@/features/activities/day-options";
+import { IdeasNote, TripCalendar } from "@/features/calendar/components/trip-calendar";
 import { summarizeDayRoutes } from "@/features/activities/day-routes";
 import { toDiscussionViews } from "@/features/discussions/view";
 import { TripHeader } from "@/features/trips/components/trip-header";
 import { tripMetadata } from "@/features/trips/metadata";
-import { formatDayLong } from "@/lib/format";
+import { formatDayLong, formatDayShort, formatWeekdayShort } from "@/lib/format";
 import { orNotFound } from "@/lib/page-data";
 import { itineraryPoints } from "@/server/activities/activity";
 import { requireUser } from "@/server/auth/session";
@@ -24,25 +26,80 @@ import {
   membershipService,
   placeService,
   tripService,
+  weatherService,
 } from "@/server/container";
+import { dateOnlyFromDate } from "@/server/shared/date-only";
+import { tripTiming } from "@/server/trips/trip";
 import { mostVoted } from "@/server/discussions/discussion";
 import { formatMoney } from "@/server/shared/money";
 import { hasPermission } from "@/server/members/member";
 
-export async function generateMetadata({ params }: PageProps<"/trips/[tripId]">): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return tripMetadata((await params).tripId);
 }
 
-export default function TripPage({ params }: PageProps<"/trips/[tripId]">) {
+type Props = PageProps<"/trips/[tripId]">;
+
+export default function TripPage({ params, searchParams }: Props) {
   return (
     <Suspense fallback={<TripPageSkeleton />}>
-      <TripPlanner params={params} />
+      <TripPlanner params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "params">) {
-  const { tripId } = await params;
+async function TripPlanner({ params, searchParams }: Props) {
+  const [{ tripId }, { view }] = await Promise.all([params, searchParams]);
+  return view === "calendar" ? <CalendarPlanner tripId={tripId} /> : <ListPlanner tripId={tripId} />;
+}
+
+/** The whole trip as a calendar: one column per day, activities at their time. */
+async function CalendarPlanner({ tripId }: { tripId: string }) {
+  const user = await requireUser(`/trips/${tripId}?view=calendar`);
+  const [{ trip, role }, itinerary, members] = await orNotFound(
+    Promise.all([
+      tripService.get(user.id, tripId),
+      activityService.getItinerary(user.id, tripId),
+      membershipService.listMembers(user.id, tripId),
+    ]),
+  );
+  // While traveling, the "now" line uses the destination's time zone (it
+  // comes with the forecast, cached for an hour).
+  const ongoing = tripTiming(trip, dateOnlyFromDate(new Date())).kind === "ongoing";
+  const forecast = ongoing
+    ? await weatherService.forecast(await placeService.tripArea(trip.destination, itineraryPoints(itinerary)))
+    : null;
+
+  return (
+    <div className="space-y-6">
+      <TripHeader trip={trip} members={members} active="itinerary" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ViewToggle tripId={trip.id} active="calendar" />
+        <IdeasNote count={itinerary.ideas.length} href={`/trips/${trip.id}`} />
+      </div>
+      <TripCalendar
+        tripId={trip.id}
+        canManage={hasPermission(role, "activity:manage")}
+        timeZone={forecast?.timeZone ?? null}
+        days={itinerary.days.map((day) => ({
+          date: day.date,
+          dayNumber: day.dayNumber,
+          weekday: formatWeekdayShort(day.date),
+          dayLabel: formatDayShort(day.date),
+          activities: day.activities.map(({ id, title, category, startTime, location }) => ({
+            id,
+            title,
+            category,
+            startTime,
+            location,
+          })),
+        }))}
+      />
+    </div>
+  );
+}
+
+async function ListPlanner({ tripId }: { tripId: string }) {
   const user = await requireUser(`/trips/${tripId}`);
   const [{ trip, role }, itinerary, members, activityCosts, discussions] = await orNotFound(
     Promise.all([
@@ -73,6 +130,7 @@ async function TripPlanner({ params }: Pick<PageProps<"/trips/[tripId]">, "param
   return (
     <div className="space-y-8">
       <TripHeader trip={trip} members={members} active="itinerary" />
+      <ViewToggle tripId={trip.id} active="list" />
       <ItineraryBoard
         tripId={trip.id}
         days={itinerary.days.map((day) => ({
