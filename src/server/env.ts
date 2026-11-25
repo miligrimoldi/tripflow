@@ -22,6 +22,12 @@ const envSchema = z.object({
    * `public/uploads` in development and are disabled in production.
    */
   BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
+  /**
+   * Google OAuth client, for "Continuar con Google". Optional: without both,
+   * the button is hidden and only email and password are offered.
+   */
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 

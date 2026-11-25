@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { Skeleton } from "@/components/ui/card";
 import { safeCallbackUrl } from "@/lib/safe-redirect";
+import { GoogleButton } from "@/features/auth/components/google-button";
+import { oauthErrorMessage } from "@/features/auth/oauth-errors";
+import { googleSignInEnabled } from "@/server/auth/auth";
 import { getCurrentUser } from "@/server/auth/session";
 
 interface AuthPageProps {
@@ -34,8 +37,24 @@ async function AuthFormGate({ searchParams, form, footer }: Pick<AuthPageProps, 
   if (await getCurrentUser()) redirect(safeCallbackUrl(callbackUrl));
 
   const footerHref = callbackUrl ? `${footer.href}?callbackUrl=${encodeURIComponent(callbackUrl)}` : footer.href;
+  // Coming back from Google with an error (cancelled, email already used…).
+  const oauthError = oauthErrorMessage(params.error);
   return (
     <>
+      {oauthError && (
+        <p role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {oauthError}
+        </p>
+      )}
+      {googleSignInEnabled && (
+        <>
+          <GoogleButton callbackUrl={callbackUrl} />
+          <div className="my-6 flex items-center gap-3 text-xs font-medium text-slate-400 uppercase">
+            <span className="h-px flex-1 bg-slate-200" />o con tu email
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+        </>
+      )}
       {form(callbackUrl)}
       <p className="mt-8 text-center text-sm text-slate-600">
         {footer.text}{" "}

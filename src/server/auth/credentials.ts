@@ -53,6 +53,24 @@ export async function signInWithEmail(input: RawInput<typeof signInSchema>): Pro
   );
 }
 
+/**
+ * Starts "Continuar con Google": returns Google's consent URL. After it,
+ * Better Auth's callback (/api/auth/callback/google) creates the session and
+ * sends the person to `callbackPath`, or to the sign-in page with `?error=`.
+ */
+export async function googleSignInUrl(callbackPath: string): Promise<string> {
+  const errorPath = `/sign-in?callbackUrl=${encodeURIComponent(callbackPath)}`;
+  let url: string | undefined;
+  await callAuth(async () => {
+    ({ url } = await auth.api.signInSocial({
+      body: { provider: "google", callbackURL: callbackPath, errorCallbackURL: errorPath, disableRedirect: true },
+      headers: await headers(),
+    }));
+  }, "No pudimos conectar con Google. Intentá de nuevo.");
+  if (!url) throw new BusinessRuleError("No pudimos conectar con Google. Intentá de nuevo.");
+  return url;
+}
+
 export async function signOut(): Promise<void> {
   await auth.api.signOut({ headers: await headers() });
 }

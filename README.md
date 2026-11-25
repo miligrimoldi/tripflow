@@ -103,7 +103,11 @@ npm run dev                     # http://localhost:3000
    deploys nuevos. En desarrollo no hace falta el token: sin él, las fotos se guardan en `public/uploads`. Mejor no
    copiarlo al `.env` local, para no mezclar fotos de prueba con las de producción.
 
-6. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
+6. Opcional, para **"Continuar con Google"**: en [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   crear un ID de cliente OAuth de tipo "Aplicación web" con el URI de redirección
+   `https://<tu-dominio>/api/auth/callback/google` (y `http://localhost:3000/api/auth/callback/google` para desarrollo),
+   y cargar `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Sin ellas, el botón no aparece.
+7. Deploy. El script `vercel-build` aplica las migraciones (`prisma migrate deploy`) antes de compilar.
 
 `BETTER_AUTH_URL` toma el dominio de producción de Vercel automáticamente; solo hace falta definirla si se usa un
 dominio propio.
@@ -191,6 +195,11 @@ src/
   puras con tests. Las fotos de las actividades salen de Wikipedia solo si el título del artículo coincide con la
   actividad: una búsqueda siempre devuelve algo ("Desayuno en el Centro Cívico" encuentra a una conductora de TV) y una
   foto equivocada es peor que ninguna.
+- **Ingreso con Google sin riesgo de robo de cuentas.** Si alguien ya tiene cuenta con email y contraseña (sin email
+  verificado) e ingresa con Google usando el mismo email, las cuentas no se unen solas: se le pide entrar con su
+  contraseña. Unirlas automáticamente permitiría que otra persona se registre primero con tu email y después se quede
+  con tu identidad de Google. Es el comportamiento seguro por defecto de Better Auth, y la app lo explica con un
+  mensaje claro.
 - **Votos idempotentes.** El caso de uso es `setVote(voted: true | false)` y no "toggle": un doble clic o un reintento
   no puede deshacer el voto. En la base, la clave primaria compuesta `(activityId, userId)` impide votar dos veces
   aunque lleguen dos requests a la vez. En la UI el voto se ve al instante (`useOptimistic`) y se confirma con el
@@ -264,4 +273,5 @@ La lógica de negocio se testea sin base de datos, con repositorios en memoria (
 
 - Tests de integración de los repositorios contra un Postgres efímero (Testcontainers) y tests E2E con Playwright.
 - Actualización en tiempo real (SSE o WebSockets) cuando otra persona edita el viaje.
-- Login con Google, verificación de email y recuperación de contraseña.
+- Verificación de email y recuperación de contraseña (con email verificado, también se podría unir la cuenta de Google
+  a una existente).

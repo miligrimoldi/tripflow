@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { safeCallbackUrl } from "@/lib/safe-redirect";
 import { formValues, runAction } from "@/lib/server-action";
-import { signInWithEmail, signOut, signUpWithEmail } from "@/server/auth/credentials";
+import { googleSignInUrl, signInWithEmail, signOut, signUpWithEmail } from "@/server/auth/credentials";
 
 /** Values to re-fill the form after an error. Never echo the password back. */
 function withoutPassword(values: Record<string, string>): Record<string, string> {
@@ -22,6 +22,16 @@ export async function signInAction(_prev: ActionState, formData: FormData): Prom
   const values = formValues(formData);
   const state = await runAction(() => signInWithEmail(values), withoutPassword(values));
   if (state.status === "success") redirect(safeCallbackUrl(values.callbackUrl));
+  return state;
+}
+
+export async function signInWithGoogleAction(callbackUrl: string | undefined): Promise<ActionState> {
+  let url: string | undefined;
+  const state = await runAction(async () => {
+    url = await googleSignInUrl(safeCallbackUrl(callbackUrl));
+  });
+  // Off to Google's account chooser (outside the try, so the redirect isn't caught).
+  if (url) redirect(url);
   return state;
 }
 
